@@ -1,22 +1,37 @@
 package com.example.slowdown.ui.navigation
 
 import android.content.Context
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.example.slowdown.data.repository.SlowDownRepository
 import com.example.slowdown.ui.screen.AppDetailScreen
 import com.example.slowdown.ui.screen.AppListScreen
 import com.example.slowdown.ui.screen.DashboardScreen
 import com.example.slowdown.ui.screen.SettingsScreen
+import com.example.slowdown.ui.screen.StatisticsScreen
 import com.example.slowdown.viewmodel.AppDetailViewModel
 import com.example.slowdown.viewmodel.AppListViewModel
 import com.example.slowdown.viewmodel.DashboardViewModel
 import com.example.slowdown.viewmodel.SettingsViewModel
+import com.example.slowdown.viewmodel.StatisticsViewModel
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -24,6 +39,7 @@ import java.nio.charset.StandardCharsets
 sealed class Screen(val route: String) {
     data object Dashboard : Screen("dashboard")
     data object AppList : Screen("app_list")
+    data object Statistics : Screen("statistics")
     data object Settings : Screen("settings")
     data object AppDetail : Screen("app_detail/{packageName}") {
         fun createRoute(packageName: String): String {
@@ -33,66 +49,157 @@ sealed class Screen(val route: String) {
     }
 }
 
+/**
+ * 底部导航项定义
+ */
+data class BottomNavItem(
+    val screen: Screen,
+    val icon: ImageVector,
+    val label: String
+)
+
+/**
+ * 底部导航栏项目列表
+ */
+val bottomNavItems = listOf(
+    BottomNavItem(Screen.Dashboard, Icons.Default.Home, "首页"),
+    BottomNavItem(Screen.AppList, Icons.AutoMirrored.Filled.List, "应用"),
+    BottomNavItem(Screen.Statistics, Icons.Default.DateRange, "统计"),
+    BottomNavItem(Screen.Settings, Icons.Default.Settings, "设置")
+)
+
 @Composable
 fun SlowDownNavGraph(
     navController: NavHostController,
     repository: SlowDownRepository,
     context: Context
 ) {
-    NavHost(
-        navController = navController,
-        startDestination = Screen.Dashboard.route
-    ) {
-        composable(Screen.Dashboard.route) {
-            val viewModel: DashboardViewModel = viewModel(
-                factory = DashboardViewModel.Factory(repository, context)
-            )
-            DashboardScreen(
-                viewModel = viewModel,
-                onNavigateToAppList = { navController.navigate(Screen.AppList.route) },
-                onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
-            )
+    Scaffold(
+        bottomBar = {
+            SlowDownBottomBar(navController = navController)
         }
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Dashboard.route,
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            composable(Screen.Dashboard.route) {
+                val viewModel: DashboardViewModel = viewModel(
+                    factory = DashboardViewModel.Factory(repository, context)
+                )
+                DashboardScreen(
+                    viewModel = viewModel,
+                    onNavigateToAppList = {
+                        navController.navigate(Screen.AppList.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate(Screen.Settings.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
 
-        composable(Screen.AppList.route) {
-            val viewModel: AppListViewModel = viewModel(
-                factory = AppListViewModel.Factory(repository, context)
-            )
-            AppListScreen(
-                viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToAppDetail = { packageName ->
-                    navController.navigate(Screen.AppDetail.createRoute(packageName))
-                }
-            )
+            composable(Screen.AppList.route) {
+                val viewModel: AppListViewModel = viewModel(
+                    factory = AppListViewModel.Factory(repository, context)
+                )
+                AppListScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToAppDetail = { packageName ->
+                        navController.navigate(Screen.AppDetail.createRoute(packageName))
+                    }
+                )
+            }
+
+            composable(Screen.Statistics.route) {
+                val viewModel: StatisticsViewModel = viewModel(
+                    factory = StatisticsViewModel.Factory(repository, context)
+                )
+                StatisticsScreen(
+                    viewModel = viewModel
+                )
+            }
+
+            composable(Screen.Settings.route) {
+                val viewModel: SettingsViewModel = viewModel(
+                    factory = SettingsViewModel.Factory(repository, context)
+                )
+                SettingsScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Screen.AppDetail.route,
+                arguments = listOf(
+                    navArgument("packageName") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val encodedPackageName = backStackEntry.arguments?.getString("packageName") ?: ""
+                val packageName = URLDecoder.decode(encodedPackageName, StandardCharsets.UTF_8.toString())
+
+                val viewModel: AppDetailViewModel = viewModel(
+                    factory = AppDetailViewModel.Factory(repository, context, packageName)
+                )
+                AppDetailScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
         }
+    }
+}
 
-        composable(Screen.Settings.route) {
-            val viewModel: SettingsViewModel = viewModel(
-                factory = SettingsViewModel.Factory(repository, context)
-            )
-            SettingsScreen(
-                viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
+@Composable
+fun SlowDownBottomBar(navController: NavHostController) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
 
-        composable(
-            route = Screen.AppDetail.route,
-            arguments = listOf(
-                navArgument("packageName") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val encodedPackageName = backStackEntry.arguments?.getString("packageName") ?: ""
-            val packageName = URLDecoder.decode(encodedPackageName, StandardCharsets.UTF_8.toString())
+    // 只在主要导航页面显示底部栏，在详情页隐藏
+    val showBottomBar = currentDestination?.route in bottomNavItems.map { it.screen.route }
 
-            val viewModel: AppDetailViewModel = viewModel(
-                factory = AppDetailViewModel.Factory(repository, context, packageName)
-            )
-            AppDetailScreen(
-                viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() }
-            )
+    if (showBottomBar) {
+        NavigationBar {
+            bottomNavItems.forEach { item ->
+                val selected = currentDestination?.hierarchy?.any { it.route == item.screen.route } == true
+
+                NavigationBarItem(
+                    icon = {
+                        Icon(
+                            imageVector = item.icon,
+                            contentDescription = item.label
+                        )
+                    },
+                    label = { Text(item.label) },
+                    selected = selected,
+                    onClick = {
+                        navController.navigate(item.screen.route) {
+                            // 避免在后退栈中累积多个相同目的地
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            // 避免在顶部重复创建相同目的地
+                            launchSingleTop = true
+                            // 重新选择之前选中的项目时恢复状态
+                            restoreState = true
+                        }
+                    }
+                )
+            }
         }
     }
 }
