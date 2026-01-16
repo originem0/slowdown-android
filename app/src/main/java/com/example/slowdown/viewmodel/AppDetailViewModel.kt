@@ -30,10 +30,6 @@ class AppDetailViewModel(
     val recentUsage: StateFlow<List<UsageRecord>> = repository.getRecentUsage(packageName, 7)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Available apps for redirect selection
-    val monitoredApps: StateFlow<List<MonitoredApp>> = repository.monitoredApps
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     private val _installedApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val installedApps: StateFlow<List<AppInfo>> = _installedApps.asStateFlow()
 
@@ -44,8 +40,6 @@ class AppDetailViewModel(
 
     private fun loadAppData() {
         viewModelScope.launch {
-            _monitoredApp.value = repository.getMonitoredApp(packageName)
-
             // Observe changes to the monitored app
             repository.monitoredApps
                 .map { apps -> apps.find { it.packageName == packageName } }

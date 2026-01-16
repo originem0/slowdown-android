@@ -200,7 +200,7 @@ private fun AppListItem(
             // Toggle switch
             Switch(
                 checked = isMonitored,
-                onCheckedChange = { onToggle(isMonitored) }
+                onCheckedChange = { newValue -> onToggle(newValue) }
             )
         }
     }
