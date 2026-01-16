@@ -6,7 +6,19 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit with project setup and MVP design\n\n- Android Studio template project \\(API 29+\\)\n- MVP design document for SlowDown app\n- Core features: countdown intervention, app redirect, statistics\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Skill(superpowers:writing-plans)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Bash(.gradlew assembleDebug)",
+      "Bash(.gradlew.bat assembleDebug)",
+      "Bash(cmd /c \"cd /d D:\\\\devlopment\\\\SlowDown && gradlew.bat assembleDebug\")",
+      "Bash(D:/devlopment/SlowDown/gradlew.bat assembleDebug)",
+      "Bash(git -C \"D:/devlopment/SlowDown\" init)",
+      "Bash(git -C \"D:/devlopment/SlowDown\" status)",
+      "Bash(git -C \"D:/devlopment/SlowDown\" diff --stat HEAD)",
+      "Bash(git -C \"D:/devlopment/SlowDown\" diff --stat)",
+      "Bash(git -C \"D:/devlopment/SlowDown\" log --oneline -5)",
+      "Bash(git -C \"D:/devlopment/SlowDown\" add -A)",
+      "Bash(git -C \"D:/devlopment/SlowDown\" commit -m \"$\\(cat <<''EOF''\nchore: configure Compose, Room, DataStore dependencies\n\n- Update libs.versions.toml with Compose, Room, DataStore, Navigation\n- Add KSP plugin for Room annotation processing\n- Convert MainActivity from XML/ViewBinding to Compose\n- Add Material3 Compose theme \\(Color, Theme, Typography\\)\n- Remove old XML layouts, fragments, menus, and navigation graph\n- Update themes.xml to use Android Material themes \\(Compose handles theming\\)\n- Set Java/Kotlin target to version 17, compileSdk to 35\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
