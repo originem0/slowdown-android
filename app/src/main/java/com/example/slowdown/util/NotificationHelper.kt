@@ -11,6 +11,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.slowdown.MainActivity
 import com.example.slowdown.R
+import com.example.slowdown.service.UsageWarningType
 import com.example.slowdown.ui.overlay.OverlayActivity
 
 /**
@@ -34,6 +35,11 @@ object NotificationHelper {
     private const val FOREGROUND_CHANNEL_ID = "slowdown_foreground"
     private const val FOREGROUND_CHANNEL_NAME = "后台运行"
     const val FOREGROUND_NOTIFICATION_ID = 1002
+
+    // 使用时间警告通知
+    private const val USAGE_WARNING_CHANNEL_ID = "slowdown_usage_warning"
+    private const val USAGE_WARNING_CHANNEL_NAME = "使用时间提醒"
+    private const val USAGE_WARNING_NOTIFICATION_ID = 1003
 
     fun createNotificationChannel(context: Context) {
         val channel = NotificationChannel(
@@ -59,9 +65,21 @@ object NotificationHelper {
             setSound(null, null)
         }
 
+        // 使用时间警告通知渠道
+        val usageWarningChannel = NotificationChannel(
+            USAGE_WARNING_CHANNEL_ID,
+            USAGE_WARNING_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "提醒应用使用时间达到限额"
+            setShowBadge(true)
+            enableVibration(true)
+        }
+
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
         notificationManager.createNotificationChannel(foregroundChannel)
+        notificationManager.createNotificationChannel(usageWarningChannel)
         Log.d(TAG, "[NotificationHelper] Notification channels created")
     }
 
@@ -181,5 +199,56 @@ object NotificationHelper {
                 Log.e(TAG, "[NotificationHelper] Failed to open full-screen intent settings: ${e.message}")
             }
         }
+    }
+
+    /**
+     * 显示使用时间警告通知
+     */
+    fun showUsageWarningNotification(
+        context: Context,
+        packageName: String,
+        appName: String,
+        warningType: UsageWarningType
+    ) {
+        Log.d(TAG, "[NotificationHelper] showUsageWarningNotification for $appName, type: $warningType")
+
+        val (title, content) = when (warningType) {
+            UsageWarningType.WARNING_80_PERCENT -> {
+                "使用时间提醒" to "$appName 已使用 80% 的每日限额"
+            }
+            UsageWarningType.LIMIT_REACHED_SOFT -> {
+                "已达每日限额" to "$appName 今日使用时间已达限额"
+            }
+            UsageWarningType.LIMIT_REACHED_STRICT -> {
+                "已达每日限额（强制）" to "$appName 今日使用时间已达限额，应用已关闭"
+            }
+        }
+
+        // 点击通知打开主界面
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            System.currentTimeMillis().toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, USAGE_WARNING_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        // 使用包名的哈希值作为通知 ID，这样同一个应用的警告会更新而不是累加
+        val notificationId = USAGE_WARNING_NOTIFICATION_ID + packageName.hashCode() % 1000
+        notificationManager.notify(notificationId, notification)
+        Log.d(TAG, "[NotificationHelper] Usage warning notification sent with id: $notificationId")
     }
 }

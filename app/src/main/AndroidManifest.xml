@@ -14,6 +14,9 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- MIUI 绕过方案：用于将应用任务推到前台 -->
     <uses-permission android:name="android.permission.REORDER_TASKS" />
+    <!-- 使用统计权限 - 用于追踪应用使用时间 -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
 
     <application
         android:name=".SlowDownApp"

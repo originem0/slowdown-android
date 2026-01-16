@@ -29,6 +29,13 @@ class AppMonitorService : AccessibilityService() {
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val cooldownMap = mutableMapOf<String, Long>()
 
+    // 使用时间追踪
+    private lateinit var usageTrackingManager: UsageTrackingManager
+    private var currentForegroundApp: String? = null
+    private var foregroundStartTime: Long = 0
+    private val usageWarningCooldownMap = mutableMapOf<String, Long>()
+    private val usageWarningCooldownMs = 10 * 60 * 1000L  // 10 分钟内不重复提醒同一警告
+
     private val repository by lazy {
         (application as SlowDownApp).repository
     }
@@ -37,6 +44,11 @@ class AppMonitorService : AccessibilityService() {
         super.onServiceConnected()
         Log.d(TAG, "[Service] ===== AccessibilityService CONNECTED =====")
         Log.d(TAG, "[Service] Service info: ${serviceInfo?.let { "eventTypes=${it.eventTypes}, feedbackType=${it.feedbackType}, flags=${it.flags}" } ?: "null"}")
+
+        // 初始化使用时间追踪管理器
+        usageTrackingManager = UsageTrackingManager(this, repository)
+        usageTrackingManager.startPeriodicSync()
+        Log.d(TAG, "[Service] UsageTrackingManager initialized and periodic sync started")
 
         // 启动前台服务通知 - 防止 MIUI 冻结 AccessibilityService
         startForegroundNotification()
@@ -98,9 +110,122 @@ class AppMonitorService : AccessibilityService() {
             return
         }
 
+        // 实时追踪：处理应用切换
+        handleRealtimeTracking(packageName)
+
         serviceScope.launch {
             handleAppLaunch(packageName)
         }
+    }
+
+    /**
+     * 处理实时使用时间追踪
+     * 当应用切换时，记录上一个应用的使用时间
+     */
+    private fun handleRealtimeTracking(newPackageName: String) {
+        if (!::usageTrackingManager.isInitialized) return
+
+        // 如果是同一个应用，不需要处理
+        if (newPackageName == currentForegroundApp) return
+
+        // 记录上一个应用的使用时间
+        if (usageTrackingManager.isRealtimeTrackingEnabled() && currentForegroundApp != null && foregroundStartTime > 0) {
+            val duration = System.currentTimeMillis() - foregroundStartTime
+            if (duration > 0) {
+                usageTrackingManager.recordForegroundTime(currentForegroundApp!!, duration)
+                Log.d(TAG, "[UsageTracking] Recorded ${duration}ms for $currentForegroundApp")
+            }
+        }
+
+        // 更新当前前台应用
+        currentForegroundApp = newPackageName
+        foregroundStartTime = System.currentTimeMillis()
+
+        // 检查新应用是否需要启动实时追踪
+        serviceScope.launch {
+            try {
+                if (usageTrackingManager.checkRealtimeTrackingNeeded(newPackageName)) {
+                    if (!usageTrackingManager.isRealtimeTrackingEnabled()) {
+                        usageTrackingManager.startRealtimeTracking(newPackageName)
+                        Log.d(TAG, "[UsageTracking] Started realtime tracking for $newPackageName")
+                    }
+                }
+
+                // 检查使用时间警告
+                checkAndShowUsageWarning(newPackageName)
+            } catch (e: Exception) {
+                Log.e(TAG, "[UsageTracking] Error in realtime tracking: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * 检查并显示使用时间警告
+     */
+    private suspend fun checkAndShowUsageWarning(packageName: String) {
+        if (!::usageTrackingManager.isInitialized) return
+
+        val warningType = usageTrackingManager.checkUsageWarning(packageName) ?: return
+
+        // 检查冷却时间，避免频繁提醒
+        val warningKey = "${packageName}_${warningType.name}"
+        val lastWarningTime = usageWarningCooldownMap[warningKey] ?: 0
+        val elapsed = System.currentTimeMillis() - lastWarningTime
+        if (elapsed < usageWarningCooldownMs) {
+            Log.d(TAG, "[UsageWarning] $warningKey in cooldown, skip")
+            return
+        }
+
+        // 更新冷却时间
+        usageWarningCooldownMap[warningKey] = System.currentTimeMillis()
+
+        val monitoredApp = repository.getMonitoredApp(packageName) ?: return
+
+        Log.d(TAG, "[UsageWarning] Showing warning for $packageName: $warningType")
+
+        when (warningType) {
+            UsageWarningType.WARNING_80_PERCENT -> {
+                // 80% 警告：显示通知提醒
+                NotificationHelper.showUsageWarningNotification(
+                    context = this,
+                    packageName = packageName,
+                    appName = monitoredApp.appName,
+                    warningType = warningType
+                )
+            }
+            UsageWarningType.LIMIT_REACHED_SOFT -> {
+                // 100% 软提醒：显示干预界面
+                showLimitReachedIntervention(packageName, monitoredApp.appName, monitoredApp.redirectPackage, false)
+            }
+            UsageWarningType.LIMIT_REACHED_STRICT -> {
+                // 100% 强制关闭：显示干预界面并返回桌面
+                showLimitReachedIntervention(packageName, monitoredApp.appName, monitoredApp.redirectPackage, true)
+            }
+        }
+    }
+
+    /**
+     * 显示达到限额的干预界面
+     */
+    private fun showLimitReachedIntervention(
+        packageName: String,
+        appName: String,
+        redirectPackage: String?,
+        forceClose: Boolean
+    ) {
+        if (forceClose) {
+            // 强制模式：直接返回桌面
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            Log.d(TAG, "[UsageWarning] Force closed app, returned to home")
+        }
+
+        // 显示提醒通知
+        NotificationHelper.showUsageWarningNotification(
+            context = this,
+            packageName = packageName,
+            appName = appName,
+            warningType = if (forceClose) UsageWarningType.LIMIT_REACHED_STRICT else UsageWarningType.LIMIT_REACHED_SOFT
+        )
     }
 
     private suspend fun handleAppLaunch(packageName: String) {
@@ -280,6 +405,12 @@ class AppMonitorService : AccessibilityService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // 停止使用时间追踪
+        if (::usageTrackingManager.isInitialized) {
+            usageTrackingManager.stopRealtimeTracking()
+            usageTrackingManager.stopPeriodicSync()
+            Log.d(TAG, "[Service] UsageTrackingManager stopped")
+        }
         serviceScope.cancel()
     }
 }
