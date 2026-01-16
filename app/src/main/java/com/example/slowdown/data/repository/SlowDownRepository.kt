@@ -11,10 +11,8 @@ import com.example.slowdown.data.local.entity.UsageRecord
 import com.example.slowdown.data.preferences.UserPreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 
 class SlowDownRepository(
     private val interventionDao: InterventionDao,
@@ -79,9 +77,7 @@ class SlowDownRepository(
     }
 
     // Usage Records
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-
-    private fun getTodayDateString(): String = dateFormat.format(Date())
+    private fun getTodayDateString(): String = LocalDate.now().toString()
 
     /**
      * 获取指定应用在指定日期的使用记录
