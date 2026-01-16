@@ -4,4 +4,13 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
+
+    <style name="Theme.SlowDown.Overlay" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+    </style>
 </resources>
