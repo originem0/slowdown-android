@@ -4,15 +4,22 @@ import com.example.slowdown.data.local.dao.AppStat
 import com.example.slowdown.data.local.dao.DailyStat
 import com.example.slowdown.data.local.dao.InterventionDao
 import com.example.slowdown.data.local.dao.MonitoredAppDao
+import com.example.slowdown.data.local.dao.UsageRecordDao
 import com.example.slowdown.data.local.entity.InterventionRecord
 import com.example.slowdown.data.local.entity.MonitoredApp
+import com.example.slowdown.data.local.entity.UsageRecord
 import com.example.slowdown.data.preferences.UserPreferences
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class SlowDownRepository(
     private val interventionDao: InterventionDao,
     private val monitoredAppDao: MonitoredAppDao,
+    private val usageRecordDao: UsageRecordDao,
     private val userPreferences: UserPreferences
 ) {
     // Preferences
@@ -69,5 +76,60 @@ class SlowDownRepository(
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
+    }
+
+    // Usage Records
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+    private fun getTodayDateString(): String = dateFormat.format(Date())
+
+    /**
+     * 获取指定应用在指定日期的使用记录
+     */
+    suspend fun getUsageRecord(packageName: String, date: String): UsageRecord? {
+        return usageRecordDao.getRecord(packageName, date)
+    }
+
+    /**
+     * 更新指定应用的使用分钟数（今日）
+     */
+    suspend fun updateUsageMinutes(packageName: String, minutes: Int) {
+        val today = getTodayDateString()
+        val record = UsageRecord(
+            packageName = packageName,
+            date = today,
+            usageMinutes = minutes,
+            lastUpdated = System.currentTimeMillis()
+        )
+        usageRecordDao.upsert(record)
+    }
+
+    /**
+     * 获取指定应用今日使用时间（Flow）
+     */
+    fun getTodayUsage(packageName: String): Flow<Int> {
+        val today = getTodayDateString()
+        return usageRecordDao.getTodayRecords(today).map { records ->
+            records.find { it.packageName == packageName }?.usageMinutes ?: 0
+        }
+    }
+
+    /**
+     * 获取指定应用最近N天的使用记录
+     */
+    fun getRecentUsage(packageName: String, days: Int): Flow<List<UsageRecord>> {
+        return usageRecordDao.getRecentRecords(packageName, days)
+    }
+
+    /**
+     * 设置应用每日使用限额
+     */
+    suspend fun setDailyLimit(packageName: String, minutes: Int?, mode: String = "soft") {
+        val app = monitoredAppDao.getByPackage(packageName) ?: return
+        val updatedApp = app.copy(
+            dailyLimitMinutes = minutes,
+            limitMode = mode
+        )
+        monitoredAppDao.update(updatedApp)
     }
 }

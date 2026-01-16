@@ -16,6 +16,7 @@ class SlowDownApp : Application() {
         SlowDownRepository(
             interventionDao = database.interventionDao(),
             monitoredAppDao = database.monitoredAppDao(),
+            usageRecordDao = database.usageRecordDao(),
             userPreferences = userPreferences
         )
     }
