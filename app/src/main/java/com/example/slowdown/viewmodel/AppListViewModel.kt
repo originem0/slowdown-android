@@ -28,8 +28,13 @@ class AppListViewModel(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    // Map of package name to today's usage in minutes
+    private val _usageMap = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val usageMap: StateFlow<Map<String, Int>> = _usageMap.asStateFlow()
+
     init {
         loadInstalledApps()
+        observeUsage()
     }
 
     private fun loadInstalledApps() {
@@ -37,6 +42,26 @@ class AppListViewModel(
             _isLoading.value = true
             _installedApps.value = PackageUtils.getInstalledApps(context)
             _isLoading.value = false
+        }
+    }
+
+    private fun observeUsage() {
+        viewModelScope.launch {
+            monitoredApps.collect { apps ->
+                val usageFlows = apps.map { app ->
+                    repository.getTodayUsage(app.packageName).map { usage ->
+                        app.packageName to usage
+                    }
+                }
+
+                if (usageFlows.isNotEmpty()) {
+                    combine(usageFlows) { usageArray ->
+                        usageArray.toMap()
+                    }.collect { usageData ->
+                        _usageMap.value = usageData
+                    }
+                }
+            }
         }
     }
 
