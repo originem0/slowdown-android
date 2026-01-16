@@ -35,4 +35,7 @@ interface MonitoredAppDao {
 
     @Query("DELETE FROM monitored_apps WHERE packageName = :packageName")
     suspend fun deleteByPackage(packageName: String)
+
+    @Query("UPDATE monitored_apps SET countdownSeconds = :seconds")
+    suspend fun updateAllCountdownSeconds(seconds: Int)
 }

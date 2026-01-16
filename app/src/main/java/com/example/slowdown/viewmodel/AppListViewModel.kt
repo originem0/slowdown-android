@@ -22,6 +22,9 @@ class AppListViewModel(
     val monitoredApps: StateFlow<List<MonitoredApp>> = repository.monitoredApps
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val defaultCountdown: StateFlow<Int> = repository.defaultCountdown
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 10)
+
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -42,10 +45,12 @@ class AppListViewModel(
             if (isMonitored) {
                 repository.removeMonitoredApp(appInfo.packageName)
             } else {
+                val countdown = defaultCountdown.value
                 repository.addMonitoredApp(
                     MonitoredApp(
                         packageName = appInfo.packageName,
-                        appName = appInfo.appName
+                        appName = appInfo.appName,
+                        countdownSeconds = countdown
                     )
                 )
             }

@@ -19,10 +19,18 @@ class SlowDownRepository(
     val serviceEnabled: Flow<Boolean> = userPreferences.serviceEnabled
     val defaultCountdown: Flow<Int> = userPreferences.defaultCountdown
     val cooldownMinutes: Flow<Int> = userPreferences.cooldownMinutes
+    val miuiAutoStartConfirmed: Flow<Boolean> = userPreferences.miuiAutoStartConfirmed
+    val miuiBackgroundPopupConfirmed: Flow<Boolean> = userPreferences.miuiBackgroundPopupConfirmed
+    val miuiBatterySaverConfirmed: Flow<Boolean> = userPreferences.miuiBatterySaverConfirmed
+    val miuiLockAppConfirmed: Flow<Boolean> = userPreferences.miuiLockAppConfirmed
 
     suspend fun setServiceEnabled(enabled: Boolean) = userPreferences.setServiceEnabled(enabled)
     suspend fun setDefaultCountdown(seconds: Int) = userPreferences.setDefaultCountdown(seconds)
     suspend fun setCooldownMinutes(minutes: Int) = userPreferences.setCooldownMinutes(minutes)
+    suspend fun setMiuiAutoStartConfirmed(confirmed: Boolean) = userPreferences.setMiuiAutoStartConfirmed(confirmed)
+    suspend fun setMiuiBackgroundPopupConfirmed(confirmed: Boolean) = userPreferences.setMiuiBackgroundPopupConfirmed(confirmed)
+    suspend fun setMiuiBatterySaverConfirmed(confirmed: Boolean) = userPreferences.setMiuiBatterySaverConfirmed(confirmed)
+    suspend fun setMiuiLockAppConfirmed(confirmed: Boolean) = userPreferences.setMiuiLockAppConfirmed(confirmed)
 
     // Monitored Apps
     val monitoredApps: Flow<List<MonitoredApp>> = monitoredAppDao.getAll()
@@ -33,6 +41,7 @@ class SlowDownRepository(
     suspend fun addMonitoredApp(app: MonitoredApp) = monitoredAppDao.insert(app)
     suspend fun updateMonitoredApp(app: MonitoredApp) = monitoredAppDao.update(app)
     suspend fun removeMonitoredApp(packageName: String) = monitoredAppDao.deleteByPackage(packageName)
+    suspend fun updateAllCountdownSeconds(seconds: Int) = monitoredAppDao.updateAllCountdownSeconds(seconds)
 
     // Interventions
     suspend fun recordIntervention(record: InterventionRecord) = interventionDao.insert(record)

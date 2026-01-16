@@ -5,16 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.slowdown.data.repository.SlowDownRepository
+import com.example.slowdown.util.MiuiHelper
 import com.example.slowdown.util.PermissionHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-
-data class PermissionState(
-    val accessibilityEnabled: Boolean = false,
-    val overlayEnabled: Boolean = false,
-    val batteryOptimizationDisabled: Boolean = false,
-    val isMiui: Boolean = false
-)
 
 class SettingsViewModel(
     private val repository: SlowDownRepository,
@@ -27,25 +21,63 @@ class SettingsViewModel(
     val cooldownMinutes: StateFlow<Int> = repository.cooldownMinutes
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 5)
 
+    private val miuiAutoStartConfirmed: StateFlow<Boolean> = repository.miuiAutoStartConfirmed
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    private val miuiBackgroundPopupConfirmed: StateFlow<Boolean> = repository.miuiBackgroundPopupConfirmed
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    private val miuiBatterySaverConfirmed: StateFlow<Boolean> = repository.miuiBatterySaverConfirmed
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    private val miuiLockAppConfirmed: StateFlow<Boolean> = repository.miuiLockAppConfirmed
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     private val _permissionState = MutableStateFlow(PermissionState())
     val permissionState: StateFlow<PermissionState> = _permissionState.asStateFlow()
 
     init {
         refreshPermissions()
+        // 监听 MIUI 确认状态变化
+        viewModelScope.launch {
+            combine(
+                miuiAutoStartConfirmed,
+                miuiBackgroundPopupConfirmed,
+                miuiBatterySaverConfirmed,
+                miuiLockAppConfirmed
+            ) { autoStart, popup, battery, lock ->
+                arrayOf(autoStart, popup, battery, lock)
+            }.collect { states ->
+                _permissionState.value = _permissionState.value.copy(
+                    miuiAutoStartConfirmed = states[0],
+                    miuiBackgroundPopupConfirmed = states[1],
+                    miuiBatterySaverConfirmed = states[2],
+                    miuiLockAppConfirmed = states[3]
+                )
+            }
+        }
     }
 
     fun refreshPermissions() {
+        val isMiui = PermissionHelper.isMiui()
         _permissionState.value = PermissionState(
             accessibilityEnabled = PermissionHelper.isAccessibilityEnabled(context),
             overlayEnabled = PermissionHelper.canDrawOverlays(context),
             batteryOptimizationDisabled = PermissionHelper.isIgnoringBatteryOptimizations(context),
-            isMiui = PermissionHelper.isMiui()
+            isMiui = isMiui,
+            // 使用 MiuiHelper 检测实际权限状态
+            miuiBackgroundPopupGranted = if (isMiui) MiuiHelper.canBackgroundStart(context) else true,
+            miuiAutoStartConfirmed = miuiAutoStartConfirmed.value,
+            miuiBackgroundPopupConfirmed = miuiBackgroundPopupConfirmed.value,
+            miuiBatterySaverConfirmed = miuiBatterySaverConfirmed.value,
+            miuiLockAppConfirmed = miuiLockAppConfirmed.value
         )
     }
 
     fun setDefaultCountdown(seconds: Int) {
         viewModelScope.launch {
             repository.setDefaultCountdown(seconds)
+            repository.updateAllCountdownSeconds(seconds)  // 同步更新所有已监控应用
         }
     }
 
@@ -60,6 +92,31 @@ class SettingsViewModel(
     fun openBatterySettings() = PermissionHelper.openBatteryOptimizationSettings(context)
     fun openMiuiAutoStartSettings() = PermissionHelper.openMiuiAutoStartSettings(context)
     fun openMiuiBackgroundPopupSettings() = PermissionHelper.openMiuiBackgroundPopupSettings(context)
+    fun openMiuiBatterySettings() = PermissionHelper.openMiuiBatterySettings(context)
+
+    fun confirmMiuiAutoStart() {
+        viewModelScope.launch {
+            repository.setMiuiAutoStartConfirmed(true)
+        }
+    }
+
+    fun confirmMiuiBackgroundPopup() {
+        viewModelScope.launch {
+            repository.setMiuiBackgroundPopupConfirmed(true)
+        }
+    }
+
+    fun confirmMiuiBatterySaver() {
+        viewModelScope.launch {
+            repository.setMiuiBatterySaverConfirmed(true)
+        }
+    }
+
+    fun confirmMiuiLockApp() {
+        viewModelScope.launch {
+            repository.setMiuiLockAppConfirmed(true)
+        }
+    }
 
     class Factory(
         private val repository: SlowDownRepository,

@@ -73,15 +73,67 @@ object PermissionHelper {
         }
     }
 
+    /**
+     * 打开 MIUI "后台弹出界面" 权限设置
+     * 这是在其他应用上显示悬浮窗的关键权限
+     */
     fun openMiuiBackgroundPopupSettings(context: Context) {
-        try {
-            val intent = Intent("miui.intent.action.APP_PERM_EDITOR").apply {
+        // 尝试多种方式打开权限设置
+        val intents = listOf(
+            // 方式1: 直接打开其他权限页面（包含后台弹出界面）
+            Intent().apply {
+                setClassName(
+                    "com.miui.securitycenter",
+                    "com.miui.permcenter.permissions.PermissionsEditorActivity"
+                )
                 putExtra("extra_pkgname", context.packageName)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            },
+            // 方式2: 应用权限编辑器
+            Intent("miui.intent.action.APP_PERM_EDITOR").apply {
+                putExtra("extra_pkgname", context.packageName)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            },
+            // 方式3: 应用信息页面
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:${context.packageName}")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+        )
+
+        for (intent in intents) {
+            try {
+                context.startActivity(intent)
+                return
+            } catch (e: Exception) {
+                continue
+            }
+        }
+
+        // 最后兜底：打开应用设置
+        openAppSettings(context)
+    }
+
+    /**
+     * 打开 MIUI 省电策略设置
+     * 需要将应用设置为"无限制"才能保证后台运行
+     */
+    fun openMiuiBatterySettings(context: Context) {
+        try {
+            // 尝试直接打开应用的省电策略页面
+            val intent = Intent().apply {
+                component = ComponentName(
+                    "com.miui.powerkeeper",
+                    "com.miui.powerkeeper.ui.HiddenAppsConfigActivity"
+                )
+                putExtra("package_name", context.packageName)
+                putExtra("package_label", "SlowDown")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             context.startActivity(intent)
         } catch (e: Exception) {
-            openAppSettings(context)
+            // 备用：打开电池优化设置
+            openBatteryOptimizationSettings(context)
         }
     }
 

@@ -18,6 +18,10 @@ class UserPreferences(private val context: Context) {
         val SERVICE_ENABLED = booleanPreferencesKey("service_enabled")
         val DEFAULT_COUNTDOWN = intPreferencesKey("default_countdown")
         val COOLDOWN_MINUTES = intPreferencesKey("cooldown_minutes")
+        val MIUI_AUTO_START_CONFIRMED = booleanPreferencesKey("miui_auto_start_confirmed")
+        val MIUI_BACKGROUND_POPUP_CONFIRMED = booleanPreferencesKey("miui_background_popup_confirmed")
+        val MIUI_BATTERY_SAVER_CONFIRMED = booleanPreferencesKey("miui_battery_saver_confirmed")
+        val MIUI_LOCK_APP_CONFIRMED = booleanPreferencesKey("miui_lock_app_confirmed")
     }
 
     val serviceEnabled: Flow<Boolean> = context.dataStore.data
@@ -28,6 +32,18 @@ class UserPreferences(private val context: Context) {
 
     val cooldownMinutes: Flow<Int> = context.dataStore.data
         .map { preferences -> preferences[COOLDOWN_MINUTES] ?: 5 }
+
+    val miuiAutoStartConfirmed: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[MIUI_AUTO_START_CONFIRMED] ?: false }
+
+    val miuiBackgroundPopupConfirmed: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[MIUI_BACKGROUND_POPUP_CONFIRMED] ?: false }
+
+    val miuiBatterySaverConfirmed: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[MIUI_BATTERY_SAVER_CONFIRMED] ?: false }
+
+    val miuiLockAppConfirmed: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[MIUI_LOCK_APP_CONFIRMED] ?: false }
 
     suspend fun setServiceEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
@@ -44,6 +60,30 @@ class UserPreferences(private val context: Context) {
     suspend fun setCooldownMinutes(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[COOLDOWN_MINUTES] = minutes
+        }
+    }
+
+    suspend fun setMiuiAutoStartConfirmed(confirmed: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[MIUI_AUTO_START_CONFIRMED] = confirmed
+        }
+    }
+
+    suspend fun setMiuiBackgroundPopupConfirmed(confirmed: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[MIUI_BACKGROUND_POPUP_CONFIRMED] = confirmed
+        }
+    }
+
+    suspend fun setMiuiBatterySaverConfirmed(confirmed: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[MIUI_BATTERY_SAVER_CONFIRMED] = confirmed
+        }
+    }
+
+    suspend fun setMiuiLockAppConfirmed(confirmed: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[MIUI_LOCK_APP_CONFIRMED] = confirmed
         }
     }
 }

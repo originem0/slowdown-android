@@ -1,6 +1,8 @@
 package com.example.slowdown.ui.overlay
 
 import android.os.Bundle
+import android.util.Log
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -15,13 +17,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.slowdown.SlowDownApp
+import com.example.slowdown.service.OverlayService
 import com.example.slowdown.ui.theme.SlowDownTheme
+import com.example.slowdown.util.NotificationHelper
 import com.example.slowdown.util.PackageUtils
 import com.example.slowdown.viewmodel.OverlayViewModel
 
 class OverlayActivity : ComponentActivity() {
 
     companion object {
+        private const val TAG = "SlowDown"
         const val EXTRA_PACKAGE_NAME = "package_name"
         const val EXTRA_APP_NAME = "app_name"
         const val EXTRA_COUNTDOWN_SECONDS = "countdown_seconds"
@@ -34,14 +39,32 @@ class OverlayActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d(TAG, "[Overlay] onCreate called")
+
+        // 取消通知（因为 Full-Screen Intent 已经启动了这个 Activity）
+        NotificationHelper.cancelNotification(this)
+
+        // 停止 OverlayService（因为 Activity 已经显示）
+        stopService(android.content.Intent(this, OverlayService::class.java))
+
+        // 设置窗口属性 - 关键：让 Activity 显示在锁屏上方并点亮屏幕
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+            WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+        )
 
         val packageName = intent.getStringExtra(EXTRA_PACKAGE_NAME) ?: run {
+            Log.e(TAG, "[Overlay] No packageName in intent, finishing")
             finish()
             return
         }
         val appName = intent.getStringExtra(EXTRA_APP_NAME) ?: packageName
         val countdownSeconds = intent.getIntExtra(EXTRA_COUNTDOWN_SECONDS, 10)
         val redirectPackage = intent.getStringExtra(EXTRA_REDIRECT_PACKAGE)
+
+        Log.d(TAG, "[Overlay] packageName=$packageName, appName=$appName, countdown=$countdownSeconds")
 
         viewModel.startCountdown(packageName, appName, countdownSeconds)
 
@@ -53,6 +76,8 @@ class OverlayActivity : ComponentActivity() {
                     redirectPackage = redirectPackage,
                     onContinue = {
                         viewModel.recordAndFinish("continued")
+                        // 启动目标应用，让用户继续使用
+                        PackageUtils.launchApp(this, packageName)
                         finish()
                     },
                     onRedirect = { redirectPkg ->

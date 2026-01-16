@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -80,36 +81,85 @@ fun SettingsScreen(
                 item {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     Text(
-                        text = "MIUI 专属设置",
+                        text = "MIUI 专属设置（必须开启）",
                         style = MaterialTheme.typography.titleMedium,
+                        color = if (permissionState.miuiPermissionsNeeded)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(16.dp)
                     )
                 }
 
                 item {
-                    ListItem(
-                        headlineContent = { Text("自启动权限") },
-                        supportingContent = { Text("允许应用开机自启") },
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        trailingContent = {
-                            TextButton(onClick = { viewModel.openMiuiAutoStartSettings() }) {
-                                Text("去开启")
-                            }
-                        }
+                    MiuiPermissionItem(
+                        title = "自启动权限",
+                        description = "允许应用开机自启",
+                        isConfirmed = permissionState.miuiAutoStartConfirmed,
+                        onOpenSettings = { viewModel.openMiuiAutoStartSettings() },
+                        onConfirm = { viewModel.confirmMiuiAutoStart() }
                     )
                 }
 
                 item {
-                    ListItem(
-                        headlineContent = { Text("后台弹出界面") },
-                        supportingContent = { Text("允许后台弹出干预界面") },
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        trailingContent = {
-                            TextButton(onClick = { viewModel.openMiuiBackgroundPopupSettings() }) {
-                                Text("去开启")
+                    // 使用实际权限检测状态
+                    MiuiBackgroundPopupItem(
+                        title = "后台弹出界面",
+                        description = "允许后台弹出干预界面（核心功能！必须开启）",
+                        isGranted = permissionState.miuiBackgroundPopupGranted,
+                        onOpenSettings = { viewModel.openMiuiBackgroundPopupSettings() },
+                        onRefresh = { viewModel.refreshPermissions() }
+                    )
+                }
+
+                item {
+                    MiuiPermissionItem(
+                        title = "省电策略设为「无限制」",
+                        description = "防止后台服务被冻结（关键！）",
+                        isConfirmed = permissionState.miuiBatterySaverConfirmed,
+                        onOpenSettings = { viewModel.openMiuiBatterySettings() },
+                        onConfirm = { viewModel.confirmMiuiBatterySaver() }
+                    )
+                }
+
+                item {
+                    MiuiManualItem(
+                        title = "锁定应用",
+                        description = "在最近任务中下拉 SlowDown 卡片，点击「锁定」",
+                        isConfirmed = permissionState.miuiLockAppConfirmed,
+                        onConfirm = { viewModel.confirmMiuiLockApp() }
+                    )
+                }
+
+                if (!permissionState.miuiBackgroundPopupGranted) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "必须开启「后台弹出界面」权限！",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "操作步骤：\n" +
+                                           "1. 点击上方「去开启」\n" +
+                                           "2. 找到「其他权限」或「权限管理」\n" +
+                                           "3. 找到「后台弹出界面」或「显示悬浮窗时在后台弹出界面」\n" +
+                                           "4. 设置为「允许」",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
                             }
                         }
-                    )
+                    }
                 }
             }
 
@@ -201,4 +251,120 @@ private fun SliderSettingItem(
             steps = (valueRange.endInclusive - valueRange.start).toInt() - 1
         )
     }
+}
+
+@Composable
+private fun MiuiPermissionItem(
+    title: String,
+    description: String,
+    isConfirmed: Boolean,
+    onOpenSettings: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = { Text(description) },
+        leadingContent = {
+            Icon(
+                imageVector = if (isConfirmed) Icons.Default.Check else Icons.Default.Warning,
+                contentDescription = null,
+                tint = if (isConfirmed) MaterialTheme.colorScheme.primary
+                       else MaterialTheme.colorScheme.error
+            )
+        },
+        trailingContent = {
+            if (!isConfirmed) {
+                Row {
+                    TextButton(onClick = onOpenSettings) {
+                        Text("去开启")
+                    }
+                    TextButton(onClick = onConfirm) {
+                        Text("已开启")
+                    }
+                }
+            }
+        },
+        modifier = Modifier.padding(horizontal = 8.dp)
+    )
+}
+
+@Composable
+private fun MiuiManualItem(
+    title: String,
+    description: String,
+    isConfirmed: Boolean,
+    onConfirm: () -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = { Text(description) },
+        leadingContent = {
+            Icon(
+                imageVector = if (isConfirmed) Icons.Default.Check else Icons.Default.Warning,
+                contentDescription = null,
+                tint = if (isConfirmed) MaterialTheme.colorScheme.primary
+                       else MaterialTheme.colorScheme.error
+            )
+        },
+        trailingContent = {
+            if (!isConfirmed) {
+                TextButton(onClick = onConfirm) {
+                    Text("已完成")
+                }
+            }
+        },
+        modifier = Modifier.padding(horizontal = 8.dp)
+    )
+}
+
+@Composable
+private fun MiuiBackgroundPopupItem(
+    title: String,
+    description: String,
+    isGranted: Boolean,
+    onOpenSettings: () -> Unit,
+    onRefresh: () -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = {
+            Column {
+                Text(description)
+                if (isGranted) {
+                    Text(
+                        text = "✓ 已检测到权限已开启",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                } else {
+                    Text(
+                        text = "✗ 检测到权限未开启",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        leadingContent = {
+            Icon(
+                imageVector = if (isGranted) Icons.Default.Check else Icons.Default.Close,
+                contentDescription = null,
+                tint = if (isGranted) MaterialTheme.colorScheme.primary
+                       else MaterialTheme.colorScheme.error
+            )
+        },
+        trailingContent = {
+            Row {
+                if (!isGranted) {
+                    TextButton(onClick = onOpenSettings) {
+                        Text("去开启")
+                    }
+                }
+                TextButton(onClick = onRefresh) {
+                    Text("刷新")
+                }
+            }
+        },
+        modifier = Modifier.padding(horizontal = 8.dp)
+    )
 }
