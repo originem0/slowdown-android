@@ -77,6 +77,15 @@ fun SettingsScreen(
                 )
             }
 
+            item {
+                PermissionItem(
+                    title = "使用统计权限",
+                    description = "用于获取应用使用时长数据",
+                    isEnabled = permissionState.usageStatsEnabled,
+                    onClick = { viewModel.openUsageStatsSettings() }
+                )
+            }
+
             if (permissionState.isMiui) {
                 item {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

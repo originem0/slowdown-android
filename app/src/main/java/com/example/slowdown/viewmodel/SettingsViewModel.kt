@@ -64,6 +64,7 @@ class SettingsViewModel(
             accessibilityEnabled = PermissionHelper.isAccessibilityEnabled(context),
             overlayEnabled = PermissionHelper.canDrawOverlays(context),
             batteryOptimizationDisabled = PermissionHelper.isIgnoringBatteryOptimizations(context),
+            usageStatsEnabled = PermissionHelper.hasUsageStatsPermission(context),
             isMiui = isMiui,
             // 使用 MiuiHelper 检测实际权限状态
             miuiBackgroundPopupGranted = if (isMiui) MiuiHelper.canBackgroundStart(context) else true,
@@ -90,6 +91,7 @@ class SettingsViewModel(
     fun openAccessibilitySettings() = PermissionHelper.openAccessibilitySettings(context)
     fun openOverlaySettings() = PermissionHelper.openOverlaySettings(context)
     fun openBatterySettings() = PermissionHelper.openBatteryOptimizationSettings(context)
+    fun openUsageStatsSettings() = PermissionHelper.openUsageStatsSettings(context)
     fun openMiuiAutoStartSettings() = PermissionHelper.openMiuiAutoStartSettings(context)
     fun openMiuiBackgroundPopupSettings() = PermissionHelper.openMiuiBackgroundPopupSettings(context)
     fun openMiuiBatterySettings() = PermissionHelper.openMiuiBatterySettings(context)

@@ -47,6 +47,7 @@ class DashboardViewModel(
             accessibilityEnabled = PermissionHelper.isAccessibilityEnabled(context),
             overlayEnabled = PermissionHelper.canDrawOverlays(context),
             batteryOptimizationDisabled = PermissionHelper.isIgnoringBatteryOptimizations(context),
+            usageStatsEnabled = PermissionHelper.hasUsageStatsPermission(context),
             isMiui = PermissionHelper.isMiui()
         )
     }

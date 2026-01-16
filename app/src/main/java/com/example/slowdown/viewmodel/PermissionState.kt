@@ -7,6 +7,7 @@ data class PermissionState(
     val accessibilityEnabled: Boolean = false,
     val overlayEnabled: Boolean = false,
     val batteryOptimizationDisabled: Boolean = false,
+    val usageStatsEnabled: Boolean = false,  // UsageStats 权限 - 用于获取应用使用时长
     val isMiui: Boolean = false,
     // MIUI 后台弹出权限 - 可通过 API 检测
     val miuiBackgroundPopupGranted: Boolean = false,  // 实际权限状态
@@ -39,6 +40,7 @@ data class PermissionState(
             if (!accessibilityEnabled) add("无障碍服务")
             if (!overlayEnabled) add("悬浮窗权限")
             if (!batteryOptimizationDisabled) add("电池优化")
+            if (!usageStatsEnabled) add("使用统计权限")
         }
 
     /**
