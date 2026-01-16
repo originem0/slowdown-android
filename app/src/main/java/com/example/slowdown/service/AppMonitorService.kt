@@ -13,6 +13,7 @@ import android.view.accessibility.AccessibilityEvent
 import androidx.core.app.ServiceCompat
 import com.example.slowdown.SlowDownApp
 import com.example.slowdown.ui.overlay.OverlayActivity
+import com.example.slowdown.ui.warning.UsageWarningActivity
 import com.example.slowdown.util.MiuiHelper
 import com.example.slowdown.util.NotificationHelper
 import com.example.slowdown.util.PackageUtils
@@ -180,33 +181,90 @@ class AppMonitorService : AccessibilityService() {
         usageWarningCooldownMap[warningKey] = System.currentTimeMillis()
 
         val monitoredApp = repository.getMonitoredApp(packageName) ?: return
+        val dailyLimit = monitoredApp.dailyLimitMinutes ?: 0
 
-        Log.d(TAG, "[UsageWarning] Showing warning for $packageName: $warningType")
+        // 获取今日使用时间
+        val todayDate = java.time.LocalDate.now().toString()
+        val usageRecord = repository.getUsageRecord(packageName, todayDate)
+        val usedMinutes = usageRecord?.usageMinutes ?: 0
 
-        when (warningType) {
-            UsageWarningType.WARNING_80_PERCENT -> {
-                // 80% 警告：显示通知提醒
-                NotificationHelper.showUsageWarningNotification(
-                    context = this,
-                    packageName = packageName,
-                    appName = monitoredApp.appName,
-                    warningType = warningType
-                )
+        Log.d(TAG, "[UsageWarning] Showing warning for $packageName: $warningType (used=$usedMinutes, limit=$dailyLimit)")
+
+        // 对于强制模式，先返回桌面
+        if (warningType == UsageWarningType.LIMIT_REACHED_STRICT) {
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            Log.d(TAG, "[UsageWarning] Force closed app, returned to home")
+        }
+
+        // 启动 UsageWarningActivity 显示警告弹窗
+        launchUsageWarningActivity(
+            packageName = packageName,
+            appName = monitoredApp.appName,
+            warningType = warningType,
+            usedMinutes = usedMinutes,
+            limitMinutes = dailyLimit,
+            redirectPackage = monitoredApp.redirectPackage
+        )
+
+        // 同时发送通知作为备用提醒
+        NotificationHelper.showUsageWarningNotification(
+            context = this,
+            packageName = packageName,
+            appName = monitoredApp.appName,
+            warningType = warningType
+        )
+    }
+
+    /**
+     * 启动使用时间警告 Activity
+     */
+    private fun launchUsageWarningActivity(
+        packageName: String,
+        appName: String,
+        warningType: UsageWarningType,
+        usedMinutes: Int,
+        limitMinutes: Int,
+        redirectPackage: String?
+    ) {
+        try {
+            val intent = Intent(this, UsageWarningActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                        Intent.FLAG_ACTIVITY_NO_USER_ACTION or
+                        Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                putExtra(UsageWarningActivity.EXTRA_WARNING_TYPE, warningType.name)
+                putExtra(UsageWarningActivity.EXTRA_PACKAGE_NAME, packageName)
+                putExtra(UsageWarningActivity.EXTRA_APP_NAME, appName)
+                putExtra(UsageWarningActivity.EXTRA_USED_MINUTES, usedMinutes)
+                putExtra(UsageWarningActivity.EXTRA_LIMIT_MINUTES, limitMinutes)
+                putExtra(UsageWarningActivity.EXTRA_REDIRECT_PACKAGE, redirectPackage)
             }
-            UsageWarningType.LIMIT_REACHED_SOFT -> {
-                // 100% 软提醒：显示干预界面
-                showLimitReachedIntervention(packageName, monitoredApp.appName, monitoredApp.redirectPackage, false)
+
+            // 尝试设置 MIUI 特定标志位
+            if (PermissionHelper.isMiui()) {
+                MiuiHelper.addMiuiFlags(intent)
             }
-            UsageWarningType.LIMIT_REACHED_STRICT -> {
-                // 100% 强制关闭：显示干预界面并返回桌面
-                showLimitReachedIntervention(packageName, monitoredApp.appName, monitoredApp.redirectPackage, true)
-            }
+
+            startActivity(intent)
+            Log.d(TAG, "[UsageWarning] UsageWarningActivity launched for $packageName")
+
+            // 使用 moveTaskToFront 强制将任务移到前台（MIUI 兼容）
+            val handler = Handler(Looper.getMainLooper())
+            handler.post { moveSlowDownToFront() }
+            handler.postDelayed({ moveSlowDownToFront() }, 100)
+            handler.postDelayed({ moveSlowDownToFront() }, 300)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "[UsageWarning] Failed to launch UsageWarningActivity: ${e.message}")
         }
     }
 
     /**
-     * 显示达到限额的干预界面
+     * 显示达到限额的干预界面（已弃用，保留以备后用）
      */
+    @Suppress("unused")
     private fun showLimitReachedIntervention(
         packageName: String,
         appName: String,
