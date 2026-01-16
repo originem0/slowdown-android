@@ -162,16 +162,18 @@ private fun SimplePieChart(
 ) {
     if (totalMinutes <= 0 || data.isEmpty()) return
 
-    val colors = listOf(
-        Color(0xFF6366F1), // Indigo
-        Color(0xFF8B5CF6), // Violet
-        Color(0xFFEC4899), // Pink
-        Color(0xFFF59E0B), // Amber
-        Color(0xFF10B981), // Emerald
-        Color(0xFF3B82F6), // Blue
-        Color(0xFFEF4444), // Red
-        Color(0xFF84CC16)  // Lime
-    )
+    val colors = remember {
+        listOf(
+            Color(0xFF6366F1), // Indigo
+            Color(0xFF8B5CF6), // Violet
+            Color(0xFFEC4899), // Pink
+            Color(0xFFF59E0B), // Amber
+            Color(0xFF10B981), // Emerald
+            Color(0xFF3B82F6), // Blue
+            Color(0xFFEF4444), // Red
+            Color(0xFF84CC16)  // Lime
+        )
+    }
 
     Canvas(modifier = modifier) {
         val strokeWidth = 30f
@@ -204,13 +206,15 @@ private fun PieChartLegend(
     appUsages: List<AppUsageData>,
     totalMinutes: Int
 ) {
-    val colors = listOf(
-        Color(0xFF6366F1),
-        Color(0xFF8B5CF6),
-        Color(0xFFEC4899),
-        Color(0xFFF59E0B),
-        Color(0xFF10B981)
-    )
+    val colors = remember {
+        listOf(
+            Color(0xFF6366F1),
+            Color(0xFF8B5CF6),
+            Color(0xFFEC4899),
+            Color(0xFFF59E0B),
+            Color(0xFF10B981)
+        )
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -465,7 +469,7 @@ private fun AppUsageRow(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 LinearProgressIndicator(
-                    progress = { percent / 100f },
+                    progress = { (percent / 100f).coerceIn(0f, 1f) },
                     modifier = Modifier
                         .weight(1f)
                         .height(8.dp),
