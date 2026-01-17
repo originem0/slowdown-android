@@ -96,14 +96,6 @@ fun AppListScreen(
                     )
                 }
 
-                // Stats Card
-                item {
-                    StatsSummaryCard(
-                        monitoredCount = monitoredList.size,
-                        unmonitoredCount = unmonitoredList.size
-                    )
-                }
-
                 // Monitored Apps
                 if (monitoredList.isNotEmpty()) {
                     item {
