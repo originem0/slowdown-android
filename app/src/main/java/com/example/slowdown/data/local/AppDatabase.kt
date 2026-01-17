@@ -15,7 +15,7 @@ import com.example.slowdown.data.local.entity.UsageRecord
 
 @Database(
     entities = [InterventionRecord::class, MonitoredApp::class, UsageRecord::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -54,6 +54,16 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // 从版本2迁移到版本3：添加 isVideoApp 字段（短视频模式）
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // 添加 isVideoApp 字段到 monitored_apps，默认值为 false (0)
+                database.execSQL("""
+                    ALTER TABLE monitored_apps ADD COLUMN isVideoApp INTEGER NOT NULL DEFAULT 0
+                """.trimIndent())
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -61,7 +71,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "slowdown_database"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                 INSTANCE = instance
                 instance

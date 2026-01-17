@@ -501,3 +501,287 @@
 ---
 
 *本文档基于应用当前功能编写，如有功能更新，请以应用内实际体验为准。*
+
+---
+
+## 开发日志：第二阶段 Bug 修复记录
+
+### 修复日期：2026-01-17
+
+#### Bug 1：限制模式切换逻辑错误
+
+**问题表现：**
+- 选择"仅统计"后无法切换到其他模式
+- "完全禁止"和"严格限制"可以互换，但无法切换到"温和提醒"
+- 添加应用默认是温和提醒，选择其他选项后无法切回
+
+**根本原因：**
+`onModeChange` 处理器进行多次独立的 ViewModel 调用（`updateEnabled`、`updateLimitMode`、`updateDailyLimit`），导致状态竞争条件。当快速连续调用时，后面的更新可能基于旧状态执行。
+
+**解决方案：**
+在 `AppDetailViewModel.kt` 中添加原子更新方法：
+```kotlin
+fun updateRestrictionMode(isEnabled: Boolean, limitMode: String, dailyLimitMinutes: Int?) {
+    viewModelScope.launch {
+        _monitoredApp.value?.let { app ->
+            val updated = app.copy(
+                isEnabled = isEnabled,
+                limitMode = limitMode,
+                dailyLimitMinutes = dailyLimitMinutes
+            )
+            repository.updateMonitoredApp(updated)
+        }
+    }
+}
+```
+
+**关键学习：** 多个相关状态字段必须原子更新，避免中间状态导致的竞争条件。
+
+---
+
+#### Bug 2：英文字母搜索不准确
+
+**问题表现：**
+在应用列表页面搜索时，输入英文字母无法正确匹配应用名称。
+
+**根本原因：**
+1. 中日文输入法可能产生全角英文字母（如 `ａｂｃ` 而非 `abc`）
+2. 大小写转换在不同 Locale 下行为不一致
+
+**解决方案：**
+在 `AppListScreen.kt` 中：
+1. 使用 `Locale.ROOT` 进行一致的大小写转换
+2. 添加 `toHalfWidth()` 函数处理全角转半角：
+```kotlin
+private fun String.toHalfWidth(): String {
+    val sb = StringBuilder()
+    for (char in this) {
+        val code = char.code
+        if (code == 0x3000) {
+            sb.append(' ')  // 全角空格
+        } else if (code in 0xFF01..0xFF5E) {
+            sb.append((code - 0xFEE0).toChar())  // 全角转半角
+        } else {
+            sb.append(char)
+        }
+    }
+    return sb.toString()
+}
+```
+
+**关键学习：** CJK 输入法兼容性需要考虑全角/半角字符转换。
+
+---
+
+#### Bug 3：弹窗在离开被监控应用后仍然弹出
+
+**问题表现：**
+用户已退出被监控应用，在 SlowDown 主界面或其他应用时，深呼吸弹窗仍然弹出。
+
+**根本原因：**
+1. `currentForegroundApp` 在用户切换到 SlowDown 或系统应用时未被清除
+2. 定期同步回调检查的是旧的 `currentForegroundApp` 值
+3. `OverlayService` 使用 `WindowManager.TYPE_APPLICATION_OVERLAY` 无条件覆盖所有应用
+
+**解决方案：**
+在 `AppMonitorService.kt` 中实现三层前台验证防护：
+
+**第1层 - 事件接收时清除追踪：**
+```kotlin
+// 切换到 SlowDown 自己
+if (packageName == this.packageName) {
+    currentForegroundApp = null
+    return
+}
+// 切换到系统应用
+if (PackageUtils.isSystemCriticalApp(packageName)) {
+    currentForegroundApp = null
+    return
+}
+```
+
+**第2层 - 同步回调验证：**
+```kotlin
+usageTrackingManager.setOnSyncCompleteListener { updatedPackages ->
+    val currentFg = currentForegroundApp
+    if (currentFg != null && currentFg in updatedPackages) {
+        val actualForeground = rootInActiveWindow?.packageName?.toString()
+        if (actualForeground == currentFg) {
+            checkAndShowUsageWarning(currentFg)
+        }
+    }
+}
+```
+
+**第3层 - 启动弹窗前最终验证：**
+```kotlin
+private fun launchDeepBreathOverlay(...) {
+    val actualForeground = rootInActiveWindow?.packageName?.toString()
+    if (actualForeground != null && actualForeground != packageName) {
+        return  // 不匹配，跳过
+    }
+    // 继续启动弹窗
+}
+```
+
+**关键学习：** 悬浮窗/弹窗必须在多个检查点验证前台状态，单一检查点不足以防止误触发。
+
+---
+
+### 相关文档
+
+- 弹窗逻辑详细说明：[popup-logic-flowchart.md](./popup-logic-flowchart.md)
+
+### 修改的文件清单
+
+| 文件 | 修改内容 |
+|------|---------|
+| `AppDetailViewModel.kt` | 添加 `updateRestrictionMode()` 原子更新方法 |
+| `AppDetailScreen.kt` | 修改 `onModeChange` 使用原子更新 |
+| `AppListScreen.kt` | 添加 `Locale.ROOT` 和 `toHalfWidth()` |
+| `AppMonitorService.kt` | 实现三层前台验证防护机制 |
+
+---
+
+#### Bug 4：应用内持续操作时深呼吸弹窗不触发
+
+**问题表现：**
+在被监控应用内持续滑动、点击时，即使 cooldown 时间到期，深呼吸弹窗也不会触发。只有退出到后台再返回时才会触发。
+
+**根本原因：**
+`handleRealtimeTracking` 函数在检测到同一应用的事件时直接 return：
+```kotlin
+// 如果是同一个应用，不需要处理
+if (newPackageName == currentForegroundApp) return
+```
+这导致 cooldown 检查被完全跳过。
+
+**解决方案：**
+将使用时间记录和弹窗检查逻辑分离：
+1. 使用时间记录：只在切换到不同应用时才记录
+2. 弹窗检查：**每次事件都检查**，让 cooldown 机制来控制是否触发
+
+```kotlin
+val isSameApp = newPackageName == currentForegroundApp
+
+// 只有切换到不同应用时才记录使用时间和重置追踪
+if (!isSameApp) {
+    // ... 记录使用时间，更新追踪状态
+}
+
+// 检查是否需要触发弹窗（无论是否同一应用都检查）
+checkAndShowUsageWarning(newPackageName)
+```
+
+**关键学习：** 记录逻辑和触发逻辑应该分离，避免一个条件跳过影响另一个功能。
+
+---
+
+#### 新功能：短视频模式（主动触发）
+
+**功能背景：**
+短视频应用（如抖音、B站）使用 ViewPager2/RecyclerView 实现视频切换，竖滑视频时不会产生 `TYPE_WINDOW_STATE_CHANGED` 事件，导致基于被动触发的弹窗机制无法检测到用户持续使用。
+
+**解决方案：**
+为短视频应用添加"短视频模式"，使用定时器主动触发弹窗检查。
+
+**实现细节：**
+1. 在 `MonitoredApp` 实体中添加 `isVideoApp: Boolean` 字段
+2. 在 `AppMonitorService` 中实现定时检查机制：
+   - 使用 `Handler` + `Runnable` 实现 30 秒间隔的定时检查
+   - 每次检查时验证前台应用是否仍是目标视频应用
+   - 通过 cooldown 机制控制弹窗触发频率
+3. 定时器启停逻辑：
+   - 进入视频应用时启动定时器
+   - 离开视频应用（切换到其他应用/桌面/SlowDown）时停止定时器
+   - 服务销毁时停止定时器
+
+**用户操作：**
+1. 进入应用详情页
+2. 在"其他设置"区域找到"短视频模式"开关
+3. 开启后，该应用将使用主动触发模式
+
+**适用场景：**
+- 抖音、快手等短视频应用
+- B站、YouTube 等视频平台
+- 任何使用滑动切换内容的应用
+
+**注意事项：**
+- 短视频模式会增加少量电量消耗（每 30 秒一次检查）
+- 普通应用建议使用默认的被动触发模式
+- 定时器触发仍受 cooldown 机制控制，不会产生过于频繁的弹窗
+
+---
+
+#### Bug 5：短视频模式在全屏播放时定时器停止
+
+**问题表现：**
+刷短视频时没有弹窗反应，直到点进评论区才触发弹窗。
+
+**根本原因：**
+`rootInActiveWindow` 在全屏视频播放（SurfaceView/TextureView）时返回 `null`。原代码将 `null` 视为"用户已离开应用"并停止定时器：
+```kotlin
+// ❌ 错误：null 时停止定时器
+if (actualForeground != targetApp) {
+    stopVideoAppCheck()  // null != targetApp，误停止
+    return
+}
+```
+
+**解决方案：**
+修改判断逻辑，只有当 `actualForeground` 明确是其他应用时才停止定时器：
+```kotlin
+// ✅ 正确：区分 null、匹配、不匹配三种情况
+if (actualForeground != null && actualForeground != targetApp) {
+    stopVideoAppCheck()  // 明确切换到其他应用才停止
+    return
+}
+
+if (actualForeground == null) {
+    Log.d(TAG, "Foreground is null (fullscreen video?), proceeding anyway")
+}
+// 继续检查...
+```
+
+**关键学习：** `rootInActiveWindow` 在全屏视频、WebView 渲染等特殊 UI 状态下会返回 `null`，不能将 `null` 等同于"用户离开"。
+
+---
+
+#### Bug 6：浏览器应用内持续浏览时弹窗不触发
+
+**问题表现：**
+在 Chrome 浏览器中持续浏览页面，弹窗不出现，退出再进入才触发。
+
+**根本原因：**
+与 Bug 5 同一问题。定期同步回调（`onSyncCompleteListener`）中对 `rootInActiveWindow == null` 的处理与视频定时器相同：
+```kotlin
+// ❌ 错误：null 时跳过检查
+if (actualForeground == currentFg) {
+    checkWarning()
+} else {
+    skip()  // null 也会进入这里
+}
+```
+
+**解决方案：**
+修改 sync callback 逻辑，当 `actualForeground == null` 时也继续检查弹窗：
+```kotlin
+// ✅ 正确：null 时也继续检查
+if (actualForeground == currentFg || actualForeground == null) {
+    checkWarning()
+} else {
+    skip()
+}
+```
+
+**关键学习：** 同一个 `rootInActiveWindow == null` 问题影响了多个代码路径（视频定时器、sync callback），需要全面排查。
+
+---
+
+### 修改的文件清单（补充）
+
+| 文件 | 修改内容 |
+|------|---------|
+| `AppDatabase.kt` | 数据库版本 2→3，添加 `MIGRATION_2_3` |
+| `AppMonitorService.kt` | 修复 `videoAppCheckRunnable` 和 `onSyncCompleteListener` 中的 null 处理 |
+| `popup-logic-flowchart.md` | 添加"十二、rootInActiveWindow 的特殊行为"章节 |

@@ -25,6 +25,7 @@ class AppMonitorService : AccessibilityService() {
 
     companion object {
         private const val TAG = "SlowDown"
+        private const val VIDEO_APP_CHECK_INTERVAL_MS = 30_000L  // 视频应用检查间隔：30秒
     }
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -34,8 +35,92 @@ class AppMonitorService : AccessibilityService() {
     private lateinit var usageTrackingManager: UsageTrackingManager
     private var currentForegroundApp: String? = null
     private var foregroundStartTime: Long = 0
-    private val usageWarningCooldownMap = mutableMapOf<String, Long>()
-    private val usageWarningCooldownMs = 10 * 60 * 1000L  // 10 分钟内不重复提醒同一警告
+
+    // 视频应用定时检查
+    private val videoAppCheckHandler = Handler(Looper.getMainLooper())
+    private var isVideoAppCheckRunning = false
+    private var currentVideoApp: String? = null  // 当前正在检查的视频应用
+
+    // 视频应用定时检查 Runnable
+    private val videoAppCheckRunnable = object : Runnable {
+        override fun run() {
+            val targetApp = currentVideoApp
+            if (targetApp == null || !isVideoAppCheckRunning) {
+                Log.d(TAG, "[VideoAppCheck] No target app or not running, stopping")
+                stopVideoAppCheck()
+                return
+            }
+
+            // 验证当前前台是否仍然是目标视频应用
+            val actualForeground = try {
+                rootInActiveWindow?.packageName?.toString()
+            } catch (e: Exception) {
+                null
+            }
+
+            // 短视频应用特殊处理：
+            // 1. actualForeground == null：可能是全屏视频播放（SurfaceView/TextureView），继续检查
+            // 2. actualForeground == targetApp：正常情况，继续检查
+            // 3. actualForeground 是其他应用：用户已离开，停止定时器
+            if (actualForeground != null && actualForeground != targetApp) {
+                Log.d(TAG, "[VideoAppCheck] Foreground changed to $actualForeground, stopping")
+                stopVideoAppCheck()
+                return
+            }
+
+            // null 情况：全屏视频播放时常见，记录日志但继续检查
+            if (actualForeground == null) {
+                Log.d(TAG, "[VideoAppCheck] Foreground is null (fullscreen video?), proceeding with check anyway")
+            }
+
+            Log.d(TAG, "[VideoAppCheck] Timer fired for $targetApp, checking cooldown and warnings")
+
+            // 检查是否需要触发弹窗
+            serviceScope.launch {
+                try {
+                    val monitoredApp = repository.getMonitoredApp(targetApp)
+                    if (monitoredApp == null || !monitoredApp.isEnabled) {
+                        Log.d(TAG, "[VideoAppCheck] App not monitored or disabled, stopping")
+                        stopVideoAppCheck()
+                        return@launch
+                    }
+
+                    val hasTimeLimit = monitoredApp.dailyLimitMinutes != null && monitoredApp.dailyLimitMinutes > 0
+
+                    if (hasTimeLimit) {
+                        // 有时间限制：通过 checkAndShowUsageWarning 处理
+                        checkAndShowUsageWarning(targetApp)
+                    } else {
+                        // 无时间限制：检查 cooldown 并触发深呼吸
+                        val cooldownMinutes = repository.cooldownMinutes.first()
+                        val lastIntervention = cooldownMap[targetApp] ?: 0
+                        val cooldownMs = cooldownMinutes * 60 * 1000L
+                        val elapsed = System.currentTimeMillis() - lastIntervention
+
+                        if (elapsed >= cooldownMs) {
+                            cooldownMap[targetApp] = System.currentTimeMillis()
+                            val defaultCountdown = repository.defaultCountdown.first()
+                            Log.d(TAG, "[VideoAppCheck] Cooldown passed, triggering deep breath for $targetApp")
+                            launchDeepBreathOverlay(targetApp, monitoredApp.appName, defaultCountdown, monitoredApp.redirectPackage)
+                        } else {
+                            Log.d(TAG, "[VideoAppCheck] $targetApp in cooldown (${elapsed/1000}s < ${cooldownMs/1000}s)")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "[VideoAppCheck] Error: ${e.message}")
+                }
+            }
+
+            // 继续下一次检查
+            if (isVideoAppCheckRunning) {
+                videoAppCheckHandler.postDelayed(this, VIDEO_APP_CHECK_INTERVAL_MS)
+            }
+        }
+    }
+
+    // 今天已显示100%温和警告的应用（当天只显示一次）
+    private val shownLimitWarningToday = mutableSetOf<String>()
+    private var lastResetDate: String = ""
 
     private val repository by lazy {
         (application as SlowDownApp).repository
@@ -48,6 +133,41 @@ class AppMonitorService : AccessibilityService() {
 
         // 初始化使用时间追踪管理器
         usageTrackingManager = UsageTrackingManager(this, repository)
+
+        // 注册同步完成回调：同步后检查当前前台应用是否需要显示警告
+        usageTrackingManager.setOnSyncCompleteListener { updatedPackages ->
+            val currentFg = currentForegroundApp
+            if (currentFg != null && currentFg in updatedPackages) {
+                // 关键检查：确认该应用确实在前台，而不是残留的旧状态
+                val actualForeground = try {
+                    rootInActiveWindow?.packageName?.toString()
+                } catch (e: Exception) {
+                    null
+                }
+
+                // 只有当实际前台应用是被监控应用时才检查警告
+                // 避免在 SlowDown 自己界面或其他应用时误触发
+                //
+                // 特殊处理 rootInActiveWindow == null 的情况：
+                // 1. 全屏视频播放时（SurfaceView/TextureView）常见
+                // 2. 浏览器渲染 WebView 时也可能发生
+                // 3. 某些应用的特殊 UI 状态
+                // 此时用户可能仍在被监控应用中，应该继续检查
+                if (actualForeground == currentFg || actualForeground == null) {
+                    if (actualForeground == null) {
+                        Log.d(TAG, "[Service] Sync completed, foreground is null (fullscreen/webview?), proceeding with check anyway for: $currentFg")
+                    } else {
+                        Log.d(TAG, "[Service] Sync completed, checking warnings for current foreground: $currentFg")
+                    }
+                    serviceScope.launch {
+                        checkAndShowUsageWarning(currentFg)
+                    }
+                } else {
+                    Log.d(TAG, "[Service] Sync completed but actual foreground ($actualForeground) != tracked ($currentFg), skip warning check")
+                }
+            }
+        }
+
         usageTrackingManager.startPeriodicSync()
         Log.d(TAG, "[Service] UsageTrackingManager initialized and periodic sync started")
 
@@ -92,11 +212,29 @@ class AppMonitorService : AccessibilityService() {
 
         val packageName = event.packageName?.toString() ?: return
 
-        // Skip our own package
-        if (packageName == this.packageName) return
+        // Skip our own package - 但要先清除追踪状态
+        if (packageName == this.packageName) {
+            // 用户切换到 SlowDown 自己，清除当前前台应用追踪
+            if (currentForegroundApp != null) {
+                Log.d(TAG, "[Service] User switched to SlowDown, clearing foreground tracking (was: $currentForegroundApp)")
+                stopVideoAppCheck()  // 停止视频应用检查
+                currentForegroundApp = null
+                foregroundStartTime = 0
+            }
+            return
+        }
 
-        // Skip system critical apps
-        if (PackageUtils.isSystemCriticalApp(packageName)) return
+        // Skip system critical apps - 也要清除追踪状态
+        if (PackageUtils.isSystemCriticalApp(packageName)) {
+            // 用户切换到系统应用（如桌面），清除追踪
+            if (currentForegroundApp != null) {
+                Log.d(TAG, "[Service] User switched to system app $packageName, clearing foreground tracking (was: $currentForegroundApp)")
+                stopVideoAppCheck()  // 停止视频应用检查
+                currentForegroundApp = null
+                foregroundStartTime = 0
+            }
+            return
+        }
 
         // 验证：只有当目标应用确实在前台时才处理
         // 使用 rootInActiveWindow 获取当前活动窗口的包名
@@ -122,37 +260,62 @@ class AppMonitorService : AccessibilityService() {
     /**
      * 处理实时使用时间追踪
      * 当应用切换时，记录上一个应用的使用时间
+     *
+     * 重要：即使是同一个应用内的事件，也需要检查 cooldown 是否到期
+     * 因为用户可能在应用内持续使用，cooldown 到期后应该触发弹窗
      */
     private fun handleRealtimeTracking(newPackageName: String) {
         if (!::usageTrackingManager.isInitialized) return
 
-        // 如果是同一个应用，不需要处理
-        if (newPackageName == currentForegroundApp) return
+        val isSameApp = newPackageName == currentForegroundApp
 
-        // 记录上一个应用的使用时间
-        if (usageTrackingManager.isRealtimeTrackingEnabled() && currentForegroundApp != null && foregroundStartTime > 0) {
-            val duration = System.currentTimeMillis() - foregroundStartTime
-            if (duration > 0) {
-                usageTrackingManager.recordForegroundTime(currentForegroundApp!!, duration)
-                Log.d(TAG, "[UsageTracking] Recorded ${duration}ms for $currentForegroundApp")
+        // 只有切换到不同应用时才记录使用时间和重置追踪
+        if (!isSameApp) {
+            // 记录上一个应用的使用时间
+            if (usageTrackingManager.isRealtimeTrackingEnabled() && currentForegroundApp != null && foregroundStartTime > 0) {
+                val duration = System.currentTimeMillis() - foregroundStartTime
+                if (duration > 0) {
+                    usageTrackingManager.recordForegroundTime(currentForegroundApp!!, duration)
+                    Log.d(TAG, "[UsageTracking] Recorded ${duration}ms for $currentForegroundApp")
+                }
             }
+
+            // 切换应用时停止之前的视频应用检查
+            stopVideoAppCheck()
+
+            // 更新当前前台应用
+            currentForegroundApp = newPackageName
+            foregroundStartTime = System.currentTimeMillis()
         }
 
-        // 更新当前前台应用
-        currentForegroundApp = newPackageName
-        foregroundStartTime = System.currentTimeMillis()
-
-        // 检查新应用是否需要启动实时追踪
+        // 检查是否需要触发弹窗
+        // 无论是否同一应用，都需要检查（因为 cooldown 可能已到期）
         serviceScope.launch {
             try {
-                if (usageTrackingManager.checkRealtimeTrackingNeeded(newPackageName)) {
+                val monitoredApp = repository.getMonitoredApp(newPackageName)
+
+                // 只有切换到新应用时才同步使用时间
+                if (!isSameApp && monitoredApp != null) {
+                    Log.d(TAG, "[UsageTracking] Syncing usage stats before checking warnings")
+                    usageTrackingManager.syncNow()
+                    // 给同步一点时间完成
+                    kotlinx.coroutines.delay(200)
+                }
+
+                if (!isSameApp && usageTrackingManager.checkRealtimeTrackingNeeded(newPackageName)) {
                     if (!usageTrackingManager.isRealtimeTrackingEnabled()) {
                         usageTrackingManager.startRealtimeTracking(newPackageName)
                         Log.d(TAG, "[UsageTracking] Started realtime tracking for $newPackageName")
                     }
                 }
 
-                // 检查使用时间警告
+                // 切换到新应用时，检查是否需要启动视频应用定时检查
+                if (!isSameApp && monitoredApp != null && monitoredApp.isEnabled && monitoredApp.isVideoApp) {
+                    Log.d(TAG, "[UsageTracking] $newPackageName is a video app, starting periodic check")
+                    startVideoAppCheck(newPackageName)
+                }
+
+                // 检查使用时间警告（无论是否同一应用都检查，让 cooldown 机制来控制）
                 checkAndShowUsageWarning(newPackageName)
             } catch (e: Exception) {
                 Log.e(TAG, "[UsageTracking] Error in realtime tracking: ${e.message}")
@@ -162,57 +325,110 @@ class AppMonitorService : AccessibilityService() {
 
     /**
      * 检查并显示使用时间警告
+     *
+     * 逻辑说明：
+     * - 深呼吸弹窗：可重复触发，受 cooldown 控制
+     * - 100%温和警告：当天只触发一次，之后继续触发深呼吸
+     * - 100%强制关闭：每次打开都触发
      */
     private suspend fun checkAndShowUsageWarning(packageName: String) {
         if (!::usageTrackingManager.isInitialized) return
 
-        val warningType = usageTrackingManager.checkUsageWarning(packageName) ?: return
-
-        // 检查冷却时间，避免频繁提醒
-        val warningKey = "${packageName}_${warningType.name}"
-        val lastWarningTime = usageWarningCooldownMap[warningKey] ?: 0
-        val elapsed = System.currentTimeMillis() - lastWarningTime
-        if (elapsed < usageWarningCooldownMs) {
-            Log.d(TAG, "[UsageWarning] $warningKey in cooldown, skip")
-            return
+        // 每天重置已显示警告的记录
+        val todayDate = java.time.LocalDate.now().toString()
+        if (todayDate != lastResetDate) {
+            shownLimitWarningToday.clear()
+            lastResetDate = todayDate
+            Log.d(TAG, "[UsageWarning] Reset daily warning records for $todayDate")
         }
 
-        // 更新冷却时间
-        usageWarningCooldownMap[warningKey] = System.currentTimeMillis()
+        val warningType = usageTrackingManager.checkUsageWarning(packageName) ?: return
 
         val monitoredApp = repository.getMonitoredApp(packageName) ?: return
         val dailyLimit = monitoredApp.dailyLimitMinutes ?: 0
-
-        // 获取今日使用时间
-        val todayDate = java.time.LocalDate.now().toString()
         val usageRecord = repository.getUsageRecord(packageName, todayDate)
         val usedMinutes = usageRecord?.usageMinutes ?: 0
 
-        Log.d(TAG, "[UsageWarning] Showing warning for $packageName: $warningType (used=$usedMinutes, limit=$dailyLimit)")
+        Log.d(TAG, "[UsageWarning] Checking warning for $packageName: $warningType (used=$usedMinutes, limit=$dailyLimit)")
 
-        // 对于强制模式，先返回桌面
-        if (warningType == UsageWarningType.LIMIT_REACHED_STRICT) {
-            performGlobalAction(GLOBAL_ACTION_HOME)
-            Log.d(TAG, "[UsageWarning] Force closed app, returned to home")
+        when (warningType) {
+            UsageWarningType.SOFT_REMINDER -> {
+                // ≥80% 但 <100%：显示深呼吸弹窗（受 cooldown 控制）
+                if (checkCooldown(packageName)) {
+                    val defaultCountdown = repository.defaultCountdown.first()
+                    Log.d(TAG, "[UsageWarning] Showing deep breath popup for $packageName at ≥80%")
+                    launchDeepBreathOverlay(packageName, monitoredApp.appName, defaultCountdown, monitoredApp.redirectPackage)
+                    updateCooldown(packageName)
+                }
+            }
+
+            UsageWarningType.LIMIT_REACHED_SOFT -> {
+                // ≥100% + 软提醒模式：统一使用深呼吸弹窗，但显示"已达限额"风格的 UI
+                // 首次达到100%时标记，之后都受 cooldown 控制
+                if (packageName !in shownLimitWarningToday) {
+                    shownLimitWarningToday.add(packageName)
+                    Log.d(TAG, "[UsageWarning] First time reaching 100% today for $packageName")
+                }
+
+                if (checkCooldown(packageName)) {
+                    val defaultCountdown = repository.defaultCountdown.first()
+                    Log.d(TAG, "[UsageWarning] Showing deep breath (limit reached style) for $packageName at ≥100%")
+                    launchDeepBreathOverlay(
+                        packageName = packageName,
+                        appName = monitoredApp.appName,
+                        countdownSeconds = defaultCountdown,
+                        redirectPackage = monitoredApp.redirectPackage,
+                        isLimitReached = true,
+                        usedMinutes = usedMinutes,
+                        limitMinutes = dailyLimit
+                    )
+                    updateCooldown(packageName)
+                }
+            }
+
+            UsageWarningType.LIMIT_REACHED_STRICT -> {
+                // ≥100% + 强制模式：每次都显示强制关闭弹窗
+                Log.d(TAG, "[UsageWarning] Showing strict mode warning for $packageName")
+
+                launchUsageWarningActivity(
+                    packageName = packageName,
+                    appName = monitoredApp.appName,
+                    warningType = warningType,
+                    usedMinutes = usedMinutes,
+                    limitMinutes = dailyLimit,
+                    redirectPackage = monitoredApp.redirectPackage
+                )
+
+                NotificationHelper.showUsageWarningNotification(
+                    context = this,
+                    packageName = packageName,
+                    appName = monitoredApp.appName,
+                    warningType = warningType
+                )
+            }
         }
+    }
 
-        // 启动 UsageWarningActivity 显示警告弹窗
-        launchUsageWarningActivity(
-            packageName = packageName,
-            appName = monitoredApp.appName,
-            warningType = warningType,
-            usedMinutes = usedMinutes,
-            limitMinutes = dailyLimit,
-            redirectPackage = monitoredApp.redirectPackage
-        )
+    /**
+     * 检查深呼吸弹窗的冷却时间
+     */
+    private suspend fun checkCooldown(packageName: String): Boolean {
+        val cooldownMinutes = repository.cooldownMinutes.first()
+        val lastTime = cooldownMap[packageName] ?: 0
+        val cooldownMs = cooldownMinutes * 60 * 1000L
+        val elapsed = System.currentTimeMillis() - lastTime
+        val canShow = elapsed >= cooldownMs
+        if (!canShow) {
+            Log.d(TAG, "[UsageWarning] $packageName in cooldown (${elapsed/1000}s < ${cooldownMs/1000}s)")
+        }
+        return canShow
+    }
 
-        // 同时发送通知作为备用提醒
-        NotificationHelper.showUsageWarningNotification(
-            context = this,
-            packageName = packageName,
-            appName = monitoredApp.appName,
-            warningType = warningType
-        )
+    /**
+     * 更新深呼吸弹窗的冷却时间
+     */
+    private fun updateCooldown(packageName: String) {
+        cooldownMap[packageName] = System.currentTimeMillis()
     }
 
     /**
@@ -226,6 +442,19 @@ class AppMonitorService : AccessibilityService() {
         limitMinutes: Int,
         redirectPackage: String?
     ) {
+        // 最后一道防线：在启动弹窗前再次验证当前前台应用
+        val actualForeground = try {
+            rootInActiveWindow?.packageName?.toString()
+        } catch (e: Exception) {
+            null
+        }
+
+        // 如果当前前台不是目标应用，跳过弹窗
+        if (actualForeground != null && actualForeground != packageName) {
+            Log.d(TAG, "[UsageWarning] launchUsageWarningActivity: actual foreground ($actualForeground) != target ($packageName), skip")
+            return
+        }
+
         try {
             val intent = Intent(this, UsageWarningActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -320,6 +549,40 @@ class AppMonitorService : AccessibilityService() {
             return
         }
 
+        // 判断是否有时间限制
+        val hasTimeLimit = monitoredApp.dailyLimitMinutes != null && monitoredApp.dailyLimitMinutes > 0
+        val isStrictMode = monitoredApp.limitMode == "strict"
+
+        // 有时间限制的应用：只在 ≥80% 时触发深呼吸（由 checkAndShowUsageWarning 处理）
+        // 无时间限制的应用：每次打开都触发深呼吸弹窗
+        if (hasTimeLimit) {
+            Log.d(TAG, "[Service] $packageName has time limit, skip launch intervention (handled by usage tracking)")
+            return
+        }
+
+        // 无时间限制 + 强制关闭模式：直接显示强制关闭弹窗（不显示深呼吸）
+        if (isStrictMode) {
+            Log.d(TAG, "[Service] $packageName has no limit + strict mode, showing strict warning immediately")
+            launchUsageWarningActivity(
+                packageName = packageName,
+                appName = monitoredApp.appName,
+                warningType = UsageWarningType.LIMIT_REACHED_STRICT,
+                usedMinutes = 0,
+                limitMinutes = 0,
+                redirectPackage = monitoredApp.redirectPackage
+            )
+            NotificationHelper.showUsageWarningNotification(
+                context = this,
+                packageName = packageName,
+                appName = monitoredApp.appName,
+                warningType = UsageWarningType.LIMIT_REACHED_STRICT
+            )
+            return
+        }
+
+        // 无时间限制 + 软提醒模式：使用 cooldown 机制，每次打开触发深呼吸
+        Log.d(TAG, "[Service] $packageName has no time limit + soft mode, checking cooldown for deep breath popup")
+
         // Check cooldown
         val cooldownMinutes = repository.cooldownMinutes.first()
         val lastIntervention = cooldownMap[packageName] ?: 0
@@ -336,22 +599,57 @@ class AppMonitorService : AccessibilityService() {
         // 使用全局默认倒计时
         val defaultCountdown = repository.defaultCountdown.first()
 
-        Log.d(TAG, "[Service] Triggering intervention for $packageName, countdown=${defaultCountdown}s")
+        Log.d(TAG, "[Service] Triggering deep breath for $packageName (no limit), countdown=${defaultCountdown}s")
+
+        // 启动深呼吸弹窗
+        launchDeepBreathOverlay(packageName, monitoredApp.appName, defaultCountdown, monitoredApp.redirectPackage)
+    }
+
+    /**
+     * 启动深呼吸弹窗（OverlayActivity）
+     * @param isLimitReached 是否已达到限额（true 时显示"休息一下"风格的 UI）
+     * @param usedMinutes 已使用分钟数（仅当 isLimitReached=true 时有意义）
+     * @param limitMinutes 限额分钟数（仅当 isLimitReached=true 时有意义）
+     */
+    private fun launchDeepBreathOverlay(
+        packageName: String,
+        appName: String,
+        countdownSeconds: Int,
+        redirectPackage: String?,
+        isLimitReached: Boolean = false,
+        usedMinutes: Int = 0,
+        limitMinutes: Int = 0
+    ) {
+        // 最后一道防线：在启动弹窗前再次验证当前前台应用
+        // 防止因为异步延迟导致在错误的时机显示弹窗
+        val actualForeground = try {
+            rootInActiveWindow?.packageName?.toString()
+        } catch (e: Exception) {
+            null
+        }
+
+        // 如果当前前台不是目标应用，跳过弹窗
+        if (actualForeground != null && actualForeground != packageName) {
+            Log.d(TAG, "[Service] launchDeepBreathOverlay: actual foreground ($actualForeground) != target ($packageName), skip")
+            return
+        }
 
         // MIUI 特定策略：先尝试直接启动 Activity（配合 moveTaskToFront）
-        // 这比 Full-Screen Intent 更可靠，因为它绕过了"后台弹出界面"限制
         if (PermissionHelper.isMiui()) {
             Log.d(TAG, "[Service] MIUI detected, using direct launch strategy")
-            launchOverlayDirectly(packageName, monitoredApp.appName, defaultCountdown, monitoredApp.redirectPackage)
+            launchOverlayDirectly(packageName, appName, countdownSeconds, redirectPackage, isLimitReached, usedMinutes, limitMinutes)
         } else {
             // 非 MIUI 设备：使用标准的 Full-Screen Intent
             Log.d(TAG, "[Service] Non-MIUI device, using Full-Screen Intent")
             NotificationHelper.showInterventionNotification(
                 context = this,
                 packageName = packageName,
-                appName = monitoredApp.appName,
-                countdownSeconds = defaultCountdown,
-                redirectPackage = monitoredApp.redirectPackage
+                appName = appName,
+                countdownSeconds = countdownSeconds,
+                redirectPackage = redirectPackage,
+                isLimitReached = isLimitReached,
+                usedMinutes = usedMinutes,
+                limitMinutes = limitMinutes
             )
         }
 
@@ -359,9 +657,12 @@ class AppMonitorService : AccessibilityService() {
         OverlayService.start(
             context = this,
             packageName = packageName,
-            appName = monitoredApp.appName,
-            countdownSeconds = defaultCountdown,
-            redirectPackage = monitoredApp.redirectPackage
+            appName = appName,
+            countdownSeconds = countdownSeconds,
+            redirectPackage = redirectPackage,
+            isLimitReached = isLimitReached,
+            usedMinutes = usedMinutes,
+            limitMinutes = limitMinutes
         )
         Log.d(TAG, "[Service] OverlayService.start() called as backup")
     }
@@ -378,7 +679,10 @@ class AppMonitorService : AccessibilityService() {
         packageName: String,
         appName: String,
         countdownSeconds: Int,
-        redirectPackage: String?
+        redirectPackage: String?,
+        isLimitReached: Boolean = false,
+        usedMinutes: Int = 0,
+        limitMinutes: Int = 0
     ) {
         try {
             // 构建 Intent - 使用更激进的 flags
@@ -393,6 +697,9 @@ class AppMonitorService : AccessibilityService() {
                 putExtra(OverlayActivity.EXTRA_APP_NAME, appName)
                 putExtra(OverlayActivity.EXTRA_COUNTDOWN_SECONDS, countdownSeconds)
                 putExtra(OverlayActivity.EXTRA_REDIRECT_PACKAGE, redirectPackage)
+                putExtra(OverlayActivity.EXTRA_IS_LIMIT_REACHED, isLimitReached)
+                putExtra(OverlayActivity.EXTRA_USED_MINUTES, usedMinutes)
+                putExtra(OverlayActivity.EXTRA_LIMIT_MINUTES, limitMinutes)
             }
 
             // 尝试设置 MIUI 特定标志位
@@ -461,8 +768,44 @@ class AppMonitorService : AccessibilityService() {
         // Required override
     }
 
+    /**
+     * 启动视频应用定时检查
+     * 对于标记为视频应用的应用，启动定时器主动检查 cooldown 并触发弹窗
+     */
+    private fun startVideoAppCheck(packageName: String) {
+        if (isVideoAppCheckRunning && currentVideoApp == packageName) {
+            Log.d(TAG, "[VideoAppCheck] Already running for $packageName")
+            return
+        }
+
+        // 停止之前的检查（如果有）
+        stopVideoAppCheck()
+
+        currentVideoApp = packageName
+        isVideoAppCheckRunning = true
+
+        // 延迟第一次检查，避免与普通触发重复
+        videoAppCheckHandler.postDelayed(videoAppCheckRunnable, VIDEO_APP_CHECK_INTERVAL_MS)
+        Log.d(TAG, "[VideoAppCheck] Started for $packageName, interval=${VIDEO_APP_CHECK_INTERVAL_MS}ms")
+    }
+
+    /**
+     * 停止视频应用定时检查
+     */
+    private fun stopVideoAppCheck() {
+        if (!isVideoAppCheckRunning) return
+
+        videoAppCheckHandler.removeCallbacks(videoAppCheckRunnable)
+        isVideoAppCheckRunning = false
+        val stoppedApp = currentVideoApp
+        currentVideoApp = null
+        Log.d(TAG, "[VideoAppCheck] Stopped (was: $stoppedApp)")
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        // 停止视频应用定时检查
+        stopVideoAppCheck()
         // 停止使用时间追踪
         if (::usageTrackingManager.isInitialized) {
             usageTrackingManager.stopRealtimeTracking()

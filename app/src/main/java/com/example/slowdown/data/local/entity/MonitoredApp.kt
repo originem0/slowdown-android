@@ -13,5 +13,6 @@ data class MonitoredApp(
     val redirectPackage: String? = null,
     val isEnabled: Boolean = true,
     val dailyLimitMinutes: Int? = null,  // 每日限额（分钟），null = 无限制
-    val limitMode: String = "soft"        // "soft" = 软提醒, "strict" = 强制关闭
+    val limitMode: String = "soft",       // "soft" = 软提醒, "strict" = 强制关闭
+    val isVideoApp: Boolean = false       // 是否为短视频应用（启用主动触发模式）
 )
