@@ -28,6 +28,7 @@ class SlowDownRepository(
     val miuiBackgroundPopupConfirmed: Flow<Boolean> = userPreferences.miuiBackgroundPopupConfirmed
     val miuiBatterySaverConfirmed: Flow<Boolean> = userPreferences.miuiBatterySaverConfirmed
     val miuiLockAppConfirmed: Flow<Boolean> = userPreferences.miuiLockAppConfirmed
+    val appLanguage: Flow<String> = userPreferences.appLanguage
 
     suspend fun setServiceEnabled(enabled: Boolean) = userPreferences.setServiceEnabled(enabled)
     suspend fun setDefaultCountdown(seconds: Int) = userPreferences.setDefaultCountdown(seconds)
@@ -36,6 +37,7 @@ class SlowDownRepository(
     suspend fun setMiuiBackgroundPopupConfirmed(confirmed: Boolean) = userPreferences.setMiuiBackgroundPopupConfirmed(confirmed)
     suspend fun setMiuiBatterySaverConfirmed(confirmed: Boolean) = userPreferences.setMiuiBatterySaverConfirmed(confirmed)
     suspend fun setMiuiLockAppConfirmed(confirmed: Boolean) = userPreferences.setMiuiLockAppConfirmed(confirmed)
+    suspend fun setAppLanguage(language: String) = userPreferences.setAppLanguage(language)
 
     // Monitored Apps
     val monitoredApps: Flow<List<MonitoredApp>> = monitoredAppDao.getAll()

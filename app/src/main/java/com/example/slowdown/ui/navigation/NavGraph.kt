@@ -3,15 +3,21 @@ package com.example.slowdown.ui.navigation
 import android.content.Context
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -21,6 +27,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.example.slowdown.R
 import com.example.slowdown.data.repository.SlowDownRepository
 import com.example.slowdown.ui.screen.AppDetailScreen
 import com.example.slowdown.ui.screen.AppListScreen
@@ -50,22 +57,23 @@ sealed class Screen(val route: String) {
 }
 
 /**
- * 底部导航项定义
+ * 底部导航项定义 - 使用 outlined/filled 图标区分选中状态
  */
 data class BottomNavItem(
     val screen: Screen,
-    val icon: ImageVector,
-    val label: String
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
+    val labelResId: Int
 )
 
 /**
  * 底部导航栏项目列表
  */
 val bottomNavItems = listOf(
-    BottomNavItem(Screen.Dashboard, Icons.Default.Home, "首页"),
-    BottomNavItem(Screen.AppList, Icons.AutoMirrored.Filled.List, "应用"),
-    BottomNavItem(Screen.Statistics, Icons.Default.DateRange, "统计"),
-    BottomNavItem(Screen.Settings, Icons.Default.Settings, "设置")
+    BottomNavItem(Screen.Dashboard, Icons.Filled.Home, Icons.Outlined.Home, R.string.nav_home),
+    BottomNavItem(Screen.AppList, Icons.Filled.Apps, Icons.Outlined.Apps, R.string.nav_apps),
+    BottomNavItem(Screen.Statistics, Icons.Filled.BarChart, Icons.Outlined.BarChart, R.string.nav_statistics),
+    BottomNavItem(Screen.Settings, Icons.Filled.Settings, Icons.Outlined.Settings, R.string.nav_settings)
 )
 
 @Composable
@@ -173,19 +181,34 @@ fun SlowDownBottomBar(navController: NavHostController) {
     val showBottomBar = currentDestination?.route in bottomNavItems.map { it.screen.route }
 
     if (showBottomBar) {
-        NavigationBar {
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = NavigationBarDefaults.Elevation
+        ) {
             bottomNavItems.forEach { item ->
                 val selected = currentDestination?.hierarchy?.any { it.route == item.screen.route } == true
 
                 NavigationBarItem(
                     icon = {
                         Icon(
-                            imageVector = item.icon,
-                            contentDescription = item.label
+                            imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                            contentDescription = stringResource(item.labelResId)
                         )
                     },
-                    label = { Text(item.label) },
+                    label = {
+                        Text(
+                            text = stringResource(item.labelResId),
+                            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
+                        )
+                    },
                     selected = selected,
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                    ),
                     onClick = {
                         navController.navigate(item.screen.route) {
                             // 避免在后退栈中累积多个相同目的地

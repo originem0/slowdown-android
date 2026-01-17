@@ -1,31 +1,43 @@
 package com.example.slowdown.ui.screen
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.Canvas
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.slowdown.data.local.dao.AppStat
-import com.example.slowdown.data.local.dao.DailyStat
+import com.example.slowdown.ui.components.*
 import com.example.slowdown.viewmodel.DashboardViewModel
 import com.example.slowdown.viewmodel.PermissionState
+import androidx.compose.ui.res.stringResource
+import com.example.slowdown.R
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
@@ -34,14 +46,12 @@ fun DashboardScreen(
 ) {
     val todayCount by viewModel.todayCount.collectAsState()
     val savedMinutes by viewModel.todaySavedMinutes.collectAsState()
-    val weeklyStats by viewModel.weeklyStats.collectAsState()
     val topApps by viewModel.topApps.collectAsState()
     val serviceEnabled by viewModel.serviceEnabled.collectAsState()
     val permissionState by viewModel.permissionState.collectAsState()
 
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // 在 resume 时刷新权限状态
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             viewModel.refreshPermissions()
@@ -49,341 +59,447 @@ fun DashboardScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("SlowDown") },
-                actions = {
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "设置")
-                    }
-                }
-            )
-        }
-    ) { padding ->
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(paddingValues),
+            contentPadding = PaddingValues(bottom = 80.dp)
         ) {
-            item { Spacer(modifier = Modifier.height(8.dp)) }
-
-            // 权限警告卡片
-            if (!permissionState.allRequiredPermissionsGranted) {
-                item {
-                    PermissionWarningCard(
-                        permissionState = permissionState,
-                        onNavigateToSettings = onNavigateToSettings
-                    )
-                }
-            }
-
-            // MIUI 权限警告（核心权限已设置后显示）
-            if (permissionState.miuiPermissionsNeeded) {
-                item {
-                    MiuiWarningCard(
-                        permissionState = permissionState,
-                        onNavigateToSettings = onNavigateToSettings
-                    )
-                }
-            }
-
+            // Header Section - Simplified
             item {
-                TodayStatsCard(
-                    count = todayCount,
-                    savedMinutes = savedMinutes,
+                StatusHeader(
                     serviceEnabled = serviceEnabled,
                     onToggleService = { viewModel.setServiceEnabled(it) }
                 )
             }
 
-            item { WeeklyChartCard(stats = weeklyStats) }
-
-            item { TopAppsCard(apps = topApps) }
-
-            item {
-                Button(
-                    onClick = onNavigateToAppList,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("管理监控应用")
+            // Permissions
+            if (!permissionState.allRequiredPermissionsGranted) {
+                item {
+                    AlertBanner(
+                        message = stringResource(R.string.setup_required),
+                        icon = Icons.Default.Warning,
+                        isWarning = true,
+                        onClick = onNavigateToSettings,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+            } else if (permissionState.miuiPermissionsNeeded) {
+                item {
+                    AlertBanner(
+                        message = stringResource(R.string.miui_permissions_needed),
+                        icon = Icons.Default.Warning,
+                        isWarning = false,
+                        onClick = onNavigateToSettings,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-        }
-    }
-}
-
-@Composable
-private fun PermissionWarningCard(
-    permissionState: PermissionState,
-    onNavigateToSettings: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "权限未完整设置",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer
-                )
+            // Stats Cards
+            item {
+                StatsOverview(count = todayCount, savedMinutes = savedMinutes)
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "缺少以下权限，应用无法正常工作：",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            permissionState.missingPermissions.forEach { permission ->
-                Text(
-                    text = "• $permission",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = onNavigateToSettings,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
-            ) {
-                Text("去设置")
+            // Top Intercepted Apps
+            if (topApps.isNotEmpty()) {
+                item {
+                    SectionTitle(title = stringResource(R.string.most_intercepted), paddingTop = 16.dp)
+                }
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        border = UserBorder
+                    ) {
+                        Column {
+                            topApps.take(5).forEachIndexed { index, app ->
+                                TopAppItem(
+                                    app = app,
+                                    maxCount = topApps.first().count,
+                                    onClick = onNavigateToAppList,
+                                    showDivider = index < 4
+                                )
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable(onClick = onNavigateToAppList)
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.view_all_apps),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
+val UserBorder @Composable get() = androidx.compose.foundation.BorderStroke(
+    1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+)
+
+
 @Composable
-private fun TodayStatsCard(
-    count: Int,
-    savedMinutes: Int,
+private fun StatusHeader(
     serviceEnabled: Boolean,
     onToggleService: (Boolean) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (serviceEnabled) "监控中" else "已暂停",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (serviceEnabled) MaterialTheme.colorScheme.primary
-                           else MaterialTheme.colorScheme.error
-                )
-                Switch(checked = serviceEnabled, onCheckedChange = onToggleService)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "今日已拦截",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "$count 次",
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = "节省约 $savedMinutes 分钟",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun WeeklyChartCard(stats: List<DailyStat>) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-            Text(text = "本周趋势", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (stats.isEmpty()) {
-                Text(
-                    text = "暂无数据",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-            } else {
-                SimpleBarChart(
-                    data = stats,
-                    modifier = Modifier.fillMaxWidth().height(120.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SimpleBarChart(data: List<DailyStat>, modifier: Modifier = Modifier) {
-    val maxValue = data.maxOfOrNull { it.count } ?: 1
-    val primaryColor = MaterialTheme.colorScheme.primary
-
-    Canvas(modifier = modifier) {
-        val barWidth = size.width / (data.size * 2)
-        val maxHeight = size.height * 0.8f
-
-        data.forEachIndexed { index, stat ->
-            val barHeight = if (maxValue > 0) (stat.count.toFloat() / maxValue) * maxHeight else 0f
-            val x = barWidth * (index * 2 + 0.5f)
-            val y = size.height - barHeight
-
-            drawRect(
-                color = primaryColor,
-                topLeft = Offset(x, y),
-                size = Size(barWidth, barHeight)
-            )
-        }
-    }
-}
-
-@Composable
-private fun TopAppsCard(apps: List<AppStat>) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-            Text(text = "最常拦截", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (apps.isEmpty()) {
-                Text(
-                    text = "暂无数据",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                apps.forEach { app ->
-                    AppStatRow(app = app, maxCount = apps.first().count)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AppStatRow(app: AppStat, maxCount: Int) {
-    val progress = if (maxCount > 0) app.count.toFloat() / maxCount else 0f
-
+    // Skeuomorphic "Depth" style: No card, floating elements with atmospheric glow
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 32.dp), // Generous top spacing (Atmospheric)
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Box(contentAlignment = Alignment.CenterStart) {
+            // 1. Atmospheric Glow behind text (only when active)
+            if (serviceEnabled) {
+                val primaryColor = MaterialTheme.colorScheme.primary
+                Canvas(modifier = Modifier.size(180.dp, 60.dp).offset(x = (-20).dp)) {
+                    drawOval(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                primaryColor.copy(alpha = 0.25f),
+                                Color.Transparent
+                            ),
+                            radius = size.width * 0.7f
+                        )
+                    )
+                }
+            }
+
+            // 2. Text with subtle depth (Shadow)
+            Column {
+                Text(
+                    text = if (serviceEnabled) stringResource(R.string.protection_active) else stringResource(R.string.protection_paused),
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        shadow = androidx.compose.ui.graphics.Shadow(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                            offset = androidx.compose.ui.geometry.Offset(0f, 2f),
+                            blurRadius = 4f
+                        )
+                    ),
+                    color = if (serviceEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                // Subtitle/Status Detail
+                Text(
+                    text = if (serviceEnabled) "System Guarding" else "Tap to Resume", // Simple engligh fallback or localized if available. User didn't ask for text change but style. keeping it simple.
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
+        }
+        
+        // Switch with depth (Scale + Shadow)
+        Box(
+            modifier = Modifier
+                .scale(1.1f)
+                .shadow(
+                    elevation = if (serviceEnabled) 8.dp else 2.dp,
+                    shape = CircleShape,
+                    spotColor = if (serviceEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                )
+        ) {
+            Switch(
+                checked = serviceEnabled,
+                onCheckedChange = onToggleService,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatsOverview(count: Int, savedMinutes: Int) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(4.dp)) // Minimal top spacer
+        
+        // Main Breathing Circle
+        BreathingCircle(count = count)
+        
+        Spacer(modifier = Modifier.height(24.dp)) // Reduced spacer
+        
+        // Stats Row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            StatItem(
+                value = count.toString(),
+                label = stringResource(R.string.intercepts),
+                icon = null
+            )
+            
+            Box(
+                modifier = Modifier
+                    .height(40.dp)
+                    .width(1.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant)
+                    .align(Alignment.CenterVertically)
+            )
+            
+            StatItem(
+                value = savedMinutes.toString(),
+                label = stringResource(R.string.min_saved),
+                icon = null
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun StatItem(value: String, label: String, icon: Any?) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = app.appName,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.width(80.dp)
-        )
-        LinearProgressIndicator(
-            progress = { progress },
-            modifier = Modifier.weight(1f).height(8.dp).padding(horizontal = 8.dp),
+            text = value,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
         )
         Text(
-            text = "${app.count}次",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.width(40.dp)
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
 
 @Composable
-private fun MiuiWarningCard(
-    permissionState: PermissionState,
-    onNavigateToSettings: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer
-        )
+private fun BreathingCircle(count: Int) {
+    val infiniteTransition = rememberInfiniteTransition(label = "breathing")
+    
+    // Slow, meditative organic rhythm (8 seconds cycle)
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 1.05f, // Extremely subtle breath
+        animationSpec = infiniteRepeatable(
+            animation = tween(8000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "mainScale"
+    )
+    
+    // Subtle alpha pulsing for texture
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(8000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glowAlpha"
+    )
+
+    // Inner glow pulse
+    val innerGlow by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 0.4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(6000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "innerGlow"
+    )
+
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val containerColor = MaterialTheme.colorScheme.primaryContainer
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    
+    // Increased size for prominent abstracted visualization
+    Box(
+        modifier = Modifier.size(320.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "MIUI 权限未配置",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "悬浮窗可能无法在其他应用上弹出，请配置：",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onTertiaryContainer
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val center = this.center
+            val baseRadius = size.minDimension / 4
+            
+            // 1. Organic Outer Haze (Soft, expanding)
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        primaryColor.copy(alpha = 0.15f * glowAlpha),
+                        primaryColor.copy(alpha = 0.05f),
+                        Color.Transparent
+                    ),
+                    center = center,
+                    radius = baseRadius * scale * 1.8f
+                ),
+                radius = baseRadius * scale * 1.8f,
+                center = center
+            )
+            
+            // 2. Secondary Texture Ring (Subtle ring)
+            drawCircle(
+                 brush = Brush.radialGradient(
+                    0.7f to Color.Transparent,
+                    0.85f to primaryColor.copy(alpha = 0.1f * innerGlow),
+                    1.0f to Color.Transparent,
+                    center = center,
+                    radius = baseRadius * scale * 1.4f
+                ),
+                radius = baseRadius * scale * 1.4f,
+                center = center
             )
 
+            // 3. Main Circle Body with "Texture" Gradient
+            // Using a complex radial gradient to simulate depth/texture
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        containerColor.copy(alpha = 0.9f),
+                        containerColor,
+                        primaryColor.copy(alpha = 0.1f)
+                    ),
+                    center = center,
+                    radius = baseRadius * scale
+                ),
+                radius = baseRadius * scale,
+                center = center
+            )
+            
+            // 4. Subtle Rim / Border (Organic, not sharp)
+            drawCircle(
+                color = primaryColor.copy(alpha = 0.3f),
+                radius = baseRadius * scale,
+                center = center,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+            )
+            
+            // 5. Inner Light (Glow from center)
+             drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        surfaceColor.copy(alpha = 0.6f),
+                        Color.Transparent
+                    ),
+                    center = center,
+                    radius = baseRadius * 0.6f
+                ),
+                radius = baseRadius * 0.6f,
+                center = center
+            )
+        }
+        // Text Content REMOVED as per user request
+    }
+}
+
+
+@Composable
+private fun TopAppItem(
+    app: AppStat,
+    maxCount: Int,
+    onClick: () -> Unit,
+    showDivider: Boolean
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // App initial circle
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+             Text(
+                text = app.appName.take(1).uppercase(),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = app.appName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            
             Spacer(modifier = Modifier.height(4.dp))
-
-            permissionState.missingMiuiPermissions.forEach { permission ->
-                Text(
-                    text = "• $permission",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = onNavigateToSettings,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.tertiary
-                )
+            
+            // Custom Progress Bar
+            val progress = if (maxCount > 0) app.count.toFloat() / maxCount else 0f
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.6f)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
-                Text("去设置")
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progress)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.secondary)
+                )
             }
         }
+
+        Text(
+            text = "${app.count}",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
+    
+    if (showDivider) {
+        HorizontalDivider(
+            modifier = Modifier.padding(start = 72.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+    }
+}
+
+val EaseInOutQuad: Easing = Easing { fraction ->
+    if (fraction < 0.5f) 2 * fraction * fraction else 1 - (-2 * fraction + 2) * (-2 * fraction + 2) / 2
+}
+
+val EaseOutQuad: Easing = Easing { fraction ->
+    1 - (1 - fraction) * (1 - fraction)
 }

@@ -20,7 +20,7 @@ class AppListViewModel(
     val installedApps: StateFlow<List<AppInfo>> = _installedApps.asStateFlow()
 
     val monitoredApps: StateFlow<List<MonitoredApp>> = repository.monitoredApps
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val defaultCountdown: StateFlow<Int> = repository.defaultCountdown
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 10)

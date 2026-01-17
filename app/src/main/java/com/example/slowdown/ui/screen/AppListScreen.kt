@@ -1,21 +1,37 @@
 package com.example.slowdown.ui.screen
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.slowdown.data.local.entity.MonitoredApp
+import com.example.slowdown.ui.components.*
 import com.example.slowdown.util.AppInfo
 import com.example.slowdown.viewmodel.AppListViewModel
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import java.util.Locale
+import androidx.compose.ui.res.stringResource
+import com.example.slowdown.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,185 +45,330 @@ fun AppListScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val usageMap by viewModel.usageMap.collectAsState()
 
-    val monitoredPackages = remember(monitoredApps) {
-        monitoredApps.map { it.packageName }.toSet()
+    var searchQuery by remember { mutableStateOf("") }
+    var appToRemove by remember { mutableStateOf<AppInfo?>(null) }
+
+    val monitoredPackages = monitoredApps.map { it.packageName }.toSet()
+    val monitoredAppMap = monitoredApps.associateBy { it.packageName }
+
+    val filteredApps = if (searchQuery.isBlank()) {
+        installedApps
+    } else {
+        val query = searchQuery.trim().lowercase(Locale.ROOT).toHalfWidth()
+        installedApps.filter { app ->
+            val appNameLower = app.appName.lowercase(Locale.ROOT).toHalfWidth()
+            val packageNameLower = app.packageName.lowercase(Locale.ROOT)
+            appNameLower.contains(query) || packageNameLower.contains(query)
+        }
     }
 
-    val monitoredAppMap = remember(monitoredApps) {
-        monitoredApps.associateBy { it.packageName }
-    }
+    val monitoredList = filteredApps.filter { monitoredPackages.contains(it.packageName) }
+    val unmonitoredList = filteredApps.filter { !monitoredPackages.contains(it.packageName) }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("选择监控应用") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                }
-            )
-        }
+        containerColor = MaterialTheme.colorScheme.background,
+        // Removed TopAppBar 
     ) { padding ->
         if (isLoading) {
             Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                items(installedApps, key = { it.packageName }) { app ->
-                    val isMonitored = monitoredPackages.contains(app.packageName)
-                    val monitoredApp = monitoredAppMap[app.packageName]
-                    val todayUsage = usageMap[app.packageName] ?: 0
-
-                    AppListItem(
-                        app = app,
-                        isMonitored = isMonitored,
-                        monitoredApp = monitoredApp,
-                        todayUsage = todayUsage,
-                        onToggle = { viewModel.toggleApp(app, it) },
-                        onClick = {
-                            if (isMonitored) {
-                                onNavigateToAppDetail(app.packageName)
-                            }
-                        }
+                // Removed Header with Back Button
+                
+                // Search Section
+                item {
+                    SearchSection(
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp) // Reduced vertical padding
                     )
                 }
+
+                // Stats Card
+                item {
+                    StatsSummaryCard(
+                        monitoredCount = monitoredList.size,
+                        unmonitoredCount = unmonitoredList.size
+                    )
+                }
+
+                // Monitored Apps
+                if (monitoredList.isNotEmpty()) {
+                    item {
+                        SectionTitle(
+                            title = stringResource(R.string.protected_apps_count, monitoredList.size),
+                            paddingTop = 8.dp // Reduced from 16.dp
+                        )
+                    }
+
+                    items(monitoredList, key = { it.packageName }) { app ->
+                        MonitoredAppItem(
+                            app = app,
+                            monitoredApp = monitoredAppMap[app.packageName],
+                            todayUsage = usageMap[app.packageName] ?: 0,
+                            onClick = { onNavigateToAppDetail(app.packageName) },
+                            onRemove = { appToRemove = app }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+
+                // Unmonitored Apps
+                if (unmonitoredList.isNotEmpty()) {
+                    item {
+                        SectionTitle(
+                            title = stringResource(R.string.available_apps_count, unmonitoredList.size),
+                            paddingTop = 8.dp // Reduced from 16.dp
+                        )
+                    }
+
+                    items(unmonitoredList, key = { it.packageName }) { app ->
+                        UnmonitoredAppItem(
+                            app = app,
+                            onAdd = { viewModel.toggleApp(app, false) }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
             }
+        }
+
+        // Remove Dialog
+        appToRemove?.let { app ->
+            AlertDialog(
+                onDismissRequest = { appToRemove = null },
+                title = { Text(stringResource(R.string.remove_protection)) },
+                text = { Text(stringResource(R.string.remove_protection_confirm, app.appName)) },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.toggleApp(app, true)
+                            appToRemove = null
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text(stringResource(R.string.remove))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { appToRemove = null }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
         }
     }
 }
 
 @Composable
-private fun AppListItem(
-    app: AppInfo,
-    isMonitored: Boolean,
-    monitoredApp: MonitoredApp?,
-    todayUsage: Int,
-    onToggle: (Boolean) -> Unit,
-    onClick: () -> Unit
+private fun StatsSummaryCard(
+    monitoredCount: Int,
+    unmonitoredCount: Int
 ) {
-    Card(
+    // Ultra minimal stats line, using small typography
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-            .clickable(enabled = isMonitored, onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isMonitored)
-                MaterialTheme.colorScheme.surfaceVariant
-            else
-                MaterialTheme.colorScheme.surface
-        )
+            .padding(horizontal = 24.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+         Text(
+            text = stringResource(R.string.label_protected) + ": $monitoredCount",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+            fontWeight = FontWeight.Medium
+        )
+        
+        Text(
+            text = stringResource(R.string.label_available) + ": $unmonitoredCount",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun StatsCard(
+    count: Int,
+    label: String,
+    color: Color,
+    onColor: Color,
+    modifier: Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = color),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.Start
         ) {
-            // App icon
-            if (app.icon != null) {
-                Image(
-                    painter = rememberDrawablePainter(drawable = app.icon),
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp)
-                )
-            } else {
-                Box(
-                    modifier = Modifier.size(48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(app.appName.take(1), style = MaterialTheme.typography.titleLarge)
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // App info and progress
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = app.appName,
-                    style = MaterialTheme.typography.titleMedium
-                )
-
-                if (isMonitored && monitoredApp != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Usage info
-                    val dailyLimit = monitoredApp.dailyLimitMinutes
-                    if (dailyLimit != null && dailyLimit > 0) {
-                        Text(
-                            text = "今日 $todayUsage/$dailyLimit 分钟",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        // Progress bar
-                        val progress = (todayUsage.toFloat() / dailyLimit).coerceIn(0f, 1f)
-                        val progressColor = when {
-                            progress >= 1f -> MaterialTheme.colorScheme.error
-                            progress >= 0.8f -> MaterialTheme.colorScheme.tertiary
-                            else -> MaterialTheme.colorScheme.primary
-                        }
-                        LinearProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp),
-                            color = progressColor,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    } else {
-                        Text(
-                            text = "今日 $todayUsage 分钟 (无限制)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Intervention mode info
-                    val modeText = when (monitoredApp.limitMode) {
-                        "strict" -> "强制关闭"
-                        else -> "软提醒"
-                    }
-                    val redirectText = if (monitoredApp.redirectPackage != null) {
-                        " | 跳转: ${getAppNameFromPackage(monitoredApp.redirectPackage)}"
-                    } else ""
-
-                    Text(
-                        text = "倒计时: ${monitoredApp.countdownSeconds}秒 | $modeText$redirectText",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Text(
-                        text = app.packageName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Toggle switch
-            Switch(
-                checked = isMonitored,
-                onCheckedChange = { newValue -> onToggle(newValue) }
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = onColor
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = onColor.copy(alpha = 0.8f)
             )
         }
     }
 }
 
-// Helper function to get app name from package (simplified)
-private fun getAppNameFromPackage(packageName: String): String {
-    return packageName.substringAfterLast('.')
-        .replaceFirstChar { it.uppercase() }
+@Composable
+private fun MonitoredAppItem(
+    app: AppInfo,
+    monitoredApp: MonitoredApp?,
+    todayUsage: Int,
+    onClick: () -> Unit,
+    onRemove: () -> Unit
+) {
+    // Prominent, spacious row for Protected apps
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp), // Increased padding
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Larger Icon for emphasis
+        AppIcon(app = app, size = 52)
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            // Larger App Name
+            Text(
+                text = app.appName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            // Mode Badge (Subtitle position for importance)
+            val modeText = when {
+                monitoredApp?.isEnabled != true -> stringResource(R.string.tracking_only)
+                monitoredApp.limitMode == "strict" -> stringResource(R.string.strict_mode)
+                else -> stringResource(R.string.gentle_mode)
+            }
+             Text(
+                text = modeText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Remove Button
+        IconButton(
+            onClick = onRemove,
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Remove",
+                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun UnmonitoredAppItem(
+    app: AppInfo,
+    onAdd: () -> Unit
+) {
+    // Compact row for "Available" apps
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onAdd)
+            .padding(horizontal = 16.dp, vertical = 6.dp), // Reduced padding
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Smaller icon for available apps
+        AppIcon(app = app, size = 32)
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Text(
+            text = app.appName,
+            style = MaterialTheme.typography.bodyMedium, // Smaller text
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+        )
+
+        Icon(
+            Icons.Default.Add,
+            contentDescription = "Add",
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun AppIcon(app: AppInfo, size: Int) {
+    if (app.icon != null) {
+        Image(
+            painter = rememberDrawablePainter(drawable = app.icon),
+            contentDescription = null,
+            modifier = Modifier
+                .size(size.dp)
+                .clip(RoundedCornerShape(12.dp))
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .size(size.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = app.appName.take(1).uppercase(),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun String.toHalfWidth(): String {
+    val sb = StringBuilder()
+    for (char in this) {
+        val code = char.code
+        if (code == 0x3000) {
+            sb.append(' ')
+        } else if (code in 0xFF01..0xFF5E) {
+            sb.append((code - 0xFEE0).toChar())
+        } else {
+            sb.append(char)
+        }
+    }
+    return sb.toString()
 }

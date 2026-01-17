@@ -142,7 +142,9 @@ private fun UsageWarningScreen(
         contentAlignment = Alignment.Center
     ) {
         when (warningType) {
-            UsageWarningType.WARNING_80_PERCENT -> {
+            UsageWarningType.SOFT_REMINDER -> {
+                // SOFT_REMINDER 不应该到这里，它应该显示深呼吸弹窗（OverlayActivity）
+                // 但为了代码完整性，我们显示一个简单的提醒
                 UsageWarning80PercentContent(
                     appName = appName,
                     usedMinutes = usedMinutes,
@@ -157,13 +159,15 @@ private fun UsageWarningScreen(
                     usedMinutes = usedMinutes,
                     redirectPackage = redirectPackage,
                     onRedirect = onRedirect,
-                    onContinue = onContinue
+                    onContinue = onContinue,
+                    onExit = onExit
                 )
             }
             UsageWarningType.LIMIT_REACHED_STRICT -> {
                 LimitReachedStrictContent(
                     appName = appName,
                     usedMinutes = usedMinutes,
+                    limitMinutes = limitMinutes,
                     redirectPackage = redirectPackage,
                     onRedirect = onRedirect,
                     onGoHome = onGoHome
@@ -283,7 +287,8 @@ private fun LimitReachedSoftContent(
     usedMinutes: Int,
     redirectPackage: String?,
     onRedirect: (String) -> Unit,
-    onContinue: () -> Unit
+    onContinue: () -> Unit,
+    onExit: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -359,6 +364,19 @@ private fun LimitReachedSoftContent(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
+        // Exit button (recommended)
+        OutlinedButton(
+            onClick = onExit,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+        ) {
+            Text("退出应用", fontSize = 18.sp)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Continue button
         TextButton(
             onClick = onContinue,
@@ -368,8 +386,8 @@ private fun LimitReachedSoftContent(
         ) {
             Text(
                 text = "继续使用",
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 16.sp
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 14.sp
             )
         }
     }
@@ -377,15 +395,20 @@ private fun LimitReachedSoftContent(
 
 /**
  * 100% 强制关闭内容（不允许继续使用）
+ * @param limitMinutes 限额分钟数，0 表示无限制模式（强制阻止）
  */
 @Composable
 private fun LimitReachedStrictContent(
     appName: String,
     usedMinutes: Int,
+    limitMinutes: Int,
     redirectPackage: String?,
     onRedirect: (String) -> Unit,
     onGoHome: () -> Unit
 ) {
+    // 无限制模式：limitMinutes = 0
+    val isNoLimitMode = limitMinutes == 0
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(32.dp)
@@ -398,9 +421,9 @@ private fun LimitReachedStrictContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Title
+        // Title - 根据模式显示不同文案
         Text(
-            text = "今日限额已用完",
+            text = if (isNoLimitMode) "该应用已被限制" else "今日限额已用完",
             color = Color(0xFFEF5350), // Red color
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold
@@ -426,16 +449,25 @@ private fun LimitReachedStrictContent(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Text(
-                    text = "今日已使用 $usedMinutes 分钟",
-                    color = Color.White.copy(alpha = 0.9f),
-                    fontSize = 18.sp
-                )
+                // 根据模式显示不同内容
+                if (isNoLimitMode) {
+                    Text(
+                        text = "已设置为禁止使用",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 18.sp
+                    )
+                } else {
+                    Text(
+                        text = "今日已使用 $usedMinutes 分钟",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 18.sp
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "明天再见!",
+                    text = if (isNoLimitMode) "做点别的事吧!" else "明天再见!",
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 18.sp,
                     textAlign = TextAlign.Center

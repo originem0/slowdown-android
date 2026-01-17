@@ -1,21 +1,58 @@
 package com.example.slowdown.ui.screen
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.slowdown.ui.components.*
 import com.example.slowdown.util.AppInfo
 import com.example.slowdown.viewmodel.AppDetailViewModel
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import androidx.compose.ui.res.stringResource
+import com.example.slowdown.R
+
+/**
+ * 限制模式枚举
+ */
+private enum class RestrictionMode {
+    NO_INTERVENTION,    // 不干预：仅监控统计
+    SOFT_REMINDER,      // 温和提醒：显示深呼吸，可继续使用
+    STRICT_LIMIT,       // 严格限制：达到限额后禁止使用
+    COMPLETELY_BLOCKED  // 完全禁止：打开即阻止
+}
+
+/**
+ * 根据当前设置判断限制模式
+ */
+private fun getCurrentMode(dailyLimit: Int?, limitMode: String, isEnabled: Boolean): RestrictionMode {
+    if (!isEnabled) return RestrictionMode.NO_INTERVENTION
+    return when {
+        dailyLimit == null && limitMode == "strict" -> RestrictionMode.COMPLETELY_BLOCKED
+        dailyLimit == null && limitMode == "soft" -> RestrictionMode.SOFT_REMINDER
+        dailyLimit != null && limitMode == "strict" -> RestrictionMode.STRICT_LIMIT
+        dailyLimit != null && limitMode == "soft" -> RestrictionMode.SOFT_REMINDER
+        else -> RestrictionMode.SOFT_REMINDER
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,82 +71,52 @@ fun AppDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("${app?.appName ?: "应用"} 设置") },
+                title = {
+                    Text(
+                        text = app?.appName ?: stringResource(R.string.app_settings),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                windowInsets = WindowInsets(0.dp)
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         if (app == null) {
             Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(strokeWidth = 3.dp)
             }
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // App Header
+                // 应用头部
                 item {
-                    AppHeaderCard(appInfo = appInfo, appName = app.appName)
+                    AppHeader(appInfo = appInfo, appName = app.appName)
                 }
 
-                // Intervention Settings Section
+                // 使用统计
                 item {
-                    SectionHeader(title = "干预设置")
-                }
-
-                item {
-                    CountdownSliderCard(
-                        currentValue = app.countdownSeconds,
-                        onValueChange = { viewModel.updateCountdown(it) }
-                    )
+                    SectionTitle(title = stringResource(R.string.today_usage), paddingTop = 8.dp)
                 }
 
                 item {
-                    RedirectAppSelector(
-                        currentRedirect = app.redirectPackage,
-                        installedApps = installedApps,
-                        currentPackage = app.packageName,
-                        onRedirectSelected = { viewModel.updateRedirectApp(it) }
-                    )
-                }
-
-                // Time Limit Section
-                item {
-                    SectionHeader(title = "时间限制")
-                }
-
-                item {
-                    DailyLimitCard(
-                        currentLimit = app.dailyLimitMinutes,
-                        onLimitChange = { viewModel.updateDailyLimit(it) }
-                    )
-                }
-
-                item {
-                    LimitModeSelector(
-                        currentMode = app.limitMode,
-                        onModeChange = { viewModel.updateLimitMode(it) }
-                    )
-                }
-
-                // Usage Statistics Section
-                item {
-                    SectionHeader(title = "使用统计")
-                }
-
-                item {
-                    UsageStatsCard(
+                    UsageStatsSection(
                         todayUsage = todayUsage,
                         weeklyAverage = if (recentUsage.isNotEmpty()) {
                             recentUsage.sumOf { it.usageMinutes } / recentUsage.size
@@ -117,372 +124,1026 @@ fun AppDetailScreen(
                     )
                 }
 
-                item { Spacer(modifier = Modifier.height(16.dp)) }
+                // 限制模式（统一设置区域）
+                item {
+                    SectionTitle(title = stringResource(R.string.restriction_mode), paddingTop = 8.dp)
+                }
+
+                item {
+                    RestrictionModeSection(
+                        currentLimit = app.dailyLimitMinutes,
+                        currentMode = app.limitMode,
+                        isEnabled = app.isEnabled,
+                        onModeChange = { mode, limit ->
+                            // 使用原子更新，一次性设置所有字段，避免状态竞争
+                            when (mode) {
+                                RestrictionMode.NO_INTERVENTION -> {
+                                    // 仅统计：禁用限制，重置为 soft 模式和无时间限制
+                                    viewModel.updateRestrictionMode(
+                                        isEnabled = false,
+                                        limitMode = "soft",
+                                        dailyLimitMinutes = null
+                                    )
+                                }
+                                RestrictionMode.SOFT_REMINDER -> {
+                                    // 温和提醒：启用，soft 模式，保留传入的时间限制
+                                    viewModel.updateRestrictionMode(
+                                        isEnabled = true,
+                                        limitMode = "soft",
+                                        dailyLimitMinutes = limit
+                                    )
+                                }
+                                RestrictionMode.STRICT_LIMIT -> {
+                                    // 严格限制：启用，strict 模式，必须有时间限制
+                                    viewModel.updateRestrictionMode(
+                                        isEnabled = true,
+                                        limitMode = "strict",
+                                        dailyLimitMinutes = limit
+                                    )
+                                }
+                                RestrictionMode.COMPLETELY_BLOCKED -> {
+                                    // 完全禁止：启用，strict 模式，无时间限制
+                                    viewModel.updateRestrictionMode(
+                                        isEnabled = true,
+                                        limitMode = "strict",
+                                        dailyLimitMinutes = null
+                                    )
+                                }
+                            }
+                        }
+                    )
+                }
+
+                // 其他设置
+                item {
+                    SectionTitle(title = stringResource(R.string.other_settings), paddingTop = 8.dp)
+                }
+
+                // 视频应用模式
+                item {
+                    VideoAppModeSection(
+                        isVideoApp = app.isVideoApp,
+                        onVideoAppModeChange = { viewModel.updateVideoAppMode(it) }
+                    )
+                }
+
+                item {
+                    RedirectSection(
+                        currentRedirect = app.redirectPackage,
+                        installedApps = installedApps,
+                        currentPackage = app.packageName,
+                        onRedirectSelected = { viewModel.updateRedirectApp(it) }
+                    )
+                }
+
+                item { Spacer(modifier = Modifier.height(24.dp)) }
             }
         }
     }
 }
 
 @Composable
-private fun AppHeaderCard(appInfo: AppInfo?, appName: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+private fun AppHeader(appInfo: AppInfo?, appName: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (appInfo?.icon != null) {
+            Image(
+                painter = rememberDrawablePainter(drawable = appInfo.icon),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = appName.take(1),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column {
+            Text(
+                text = appName,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Medium
+            )
+            if (appInfo != null) {
+                Text(
+                    text = appInfo.packageName,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UsageStatsSection(
+    todayUsage: Int,
+    weeklyAverage: Int
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            if (appInfo?.icon != null) {
-                Image(
-                    painter = rememberDrawablePainter(drawable = appInfo.icon),
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp)
-                )
-            } else {
-                Box(
-                    modifier = Modifier.size(64.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = appName.take(1),
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
+            StatValue(
+                value = stringResource(R.string.minutes_format, todayUsage),
+                label = stringResource(R.string.today_usage),
+                valueColor = MaterialTheme.colorScheme.primary
+            )
+            StatValue(
+                value = "$weeklyAverage ${stringResource(R.string.minutes_per_day)}",
+                label = stringResource(R.string.weekly_average),
+                valueColor = MaterialTheme.colorScheme.secondary
+            )
+        }
+        ListDivider(startIndent = 0.dp)
+    }
+}
+
+/**
+ * 统一的限制模式设置区域
+ * 将模式选择和时间限制整合为四个清晰的选项
+ */
+@Composable
+private fun RestrictionModeSection(
+    currentLimit: Int?,
+    currentMode: String,
+    isEnabled: Boolean,
+    onModeChange: (RestrictionMode, Int?) -> Unit
+) {
+    val currentRestrictionMode = getCurrentMode(currentLimit, currentMode, isEnabled)
+    var showTimePicker by remember { mutableStateOf(false) }
+    var editingMode by remember { mutableStateOf<RestrictionMode?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        // 选项1：仅统计
+        RestrictionModeItem(
+            title = stringResource(R.string.tracking_only_title),
+            description = stringResource(R.string.tracking_only_desc),
+            selected = currentRestrictionMode == RestrictionMode.NO_INTERVENTION,
+            onClick = { onModeChange(RestrictionMode.NO_INTERVENTION, null) }
+        )
+        ListDivider(startIndent = 52.dp)
+
+        // 选项2：温和提醒
+        RestrictionModeItem(
+            title = stringResource(R.string.gentle_reminder_title),
+            description = when {
+                currentRestrictionMode == RestrictionMode.SOFT_REMINDER && currentLimit != null ->
+                    stringResource(R.string.gentle_reminder_with_limit, currentLimit)
+                currentRestrictionMode == RestrictionMode.SOFT_REMINDER ->
+                    stringResource(R.string.gentle_reminder_every_open)
+                else -> stringResource(R.string.gentle_reminder_desc)
+            },
+            selected = currentRestrictionMode == RestrictionMode.SOFT_REMINDER,
+            showTimeConfig = currentRestrictionMode == RestrictionMode.SOFT_REMINDER,
+            currentLimit = if (currentRestrictionMode == RestrictionMode.SOFT_REMINDER) currentLimit else null,
+            onClick = {
+                // 直接切换到温和提醒模式（保留当前时间限制）
+                onModeChange(RestrictionMode.SOFT_REMINDER, currentLimit)
+            },
+            onTimeClick = {
+                editingMode = RestrictionMode.SOFT_REMINDER
+                showTimePicker = true
             }
+        )
+        ListDivider(startIndent = 52.dp)
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column {
-                Text(
-                    text = appName,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                if (appInfo != null) {
-                    Text(
-                        text = appInfo.packageName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
+        // 选项3：严格限制
+        RestrictionModeItem(
+            title = stringResource(R.string.strict_limit_title),
+            description = when {
+                currentRestrictionMode == RestrictionMode.STRICT_LIMIT && currentLimit != null ->
+                    stringResource(R.string.strict_limit_with_limit, currentLimit)
+                else -> stringResource(R.string.strict_limit_desc)
+            },
+            selected = currentRestrictionMode == RestrictionMode.STRICT_LIMIT,
+            showTimeConfig = currentRestrictionMode == RestrictionMode.STRICT_LIMIT,
+            currentLimit = if (currentRestrictionMode == RestrictionMode.STRICT_LIMIT) currentLimit else null,
+            onClick = {
+                // 严格限制必须有时间限额，如果没有则弹出选择器
+                if (currentLimit != null) {
+                    onModeChange(RestrictionMode.STRICT_LIMIT, currentLimit)
+                } else {
+                    editingMode = RestrictionMode.STRICT_LIMIT
+                    showTimePicker = true
                 }
+            },
+            onTimeClick = {
+                editingMode = RestrictionMode.STRICT_LIMIT
+                showTimePicker = true
+            },
+            accentColor = MaterialTheme.colorScheme.tertiary
+        )
+        ListDivider(startIndent = 52.dp)
+
+        // 选项4：完全禁止
+        RestrictionModeItem(
+            title = stringResource(R.string.completely_blocked_title),
+            description = stringResource(R.string.completely_blocked_desc),
+            selected = currentRestrictionMode == RestrictionMode.COMPLETELY_BLOCKED,
+            onClick = { onModeChange(RestrictionMode.COMPLETELY_BLOCKED, null) },
+            accentColor = MaterialTheme.colorScheme.error
+        )
+        ListDivider(startIndent = 0.dp)
+    }
+
+    // 时间选择对话框
+    if (showTimePicker && editingMode != null) {
+        TimeLimitPickerDialog(
+            currentValue = currentLimit ?: 30,
+            allowNoLimit = editingMode == RestrictionMode.SOFT_REMINDER,
+            onDismiss = {
+                showTimePicker = false
+                editingMode = null
+            },
+            onConfirm = { minutes ->
+                onModeChange(editingMode!!, minutes)
+                showTimePicker = false
+                editingMode = null
+            }
+        )
+    }
+}
+
+/**
+ * 单个限制模式选项
+ * 使用 clickable 替代 selectable 以提高响应性
+ */
+@Composable
+private fun RestrictionModeItem(
+    title: String,
+    description: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    showTimeConfig: Boolean = false,
+    currentLimit: Int? = null,
+    onTimeClick: (() -> Unit)? = null,
+    accentColor: Color = MaterialTheme.colorScheme.primary
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),  // 增加垂直 padding 使点击区域更大
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = onClick,  // RadioButton 也响应点击
+            colors = RadioButtonDefaults.colors(
+                selectedColor = accentColor
+            )
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (selected) accentColor else MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        // 时间配置按钮（仅在选中且需要时显示）
+        if (showTimeConfig && onTimeClick != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            OutlinedButton(
+                onClick = onTimeClick,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                modifier = Modifier.height(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Schedule,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = if (currentLimit != null) stringResource(R.string.minutes_format, currentLimit) else stringResource(R.string.no_limit),
+                    style = MaterialTheme.typography.labelMedium
+                )
             }
         }
     }
 }
 
+/**
+ * 时间限制选择对话框
+ */
 @Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+private fun TimeLimitPickerDialog(
+    currentValue: Int,
+    allowNoLimit: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (Int?) -> Unit
+) {
+    var selectedPreset by remember { mutableStateOf<Int?>(currentValue) }
+    var showCustomInput by remember { mutableStateOf(false) }
+    var customValue by remember { mutableStateOf(currentValue.toString()) }
+
+    val presets = listOf(
+        15 to "15 分钟",
+        30 to "30 分钟",
+        60 to "1 小时",
+        120 to "2 小时"
     )
-    HorizontalDivider()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.set_daily_limit)) },
+        text = {
+            Column {
+                if (allowNoLimit) {
+                    // 无限制选项
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = selectedPreset == null && !showCustomInput,
+                                onClick = {
+                                    selectedPreset = null
+                                    showCustomInput = false
+                                },
+                                role = Role.RadioButton
+                            )
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedPreset == null && !showCustomInput,
+                            onClick = null
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.no_limit_remind_every_open))
+                    }
+                }
+
+                // 预设选项
+                presets.forEach { (value, label) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = selectedPreset == value && !showCustomInput,
+                                onClick = {
+                                    selectedPreset = value
+                                    showCustomInput = false
+                                },
+                                role = Role.RadioButton
+                            )
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedPreset == value && !showCustomInput,
+                            onClick = null
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(label)
+                    }
+                }
+
+                // 自定义选项
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = showCustomInput,
+                            onClick = { showCustomInput = true },
+                            role = Role.RadioButton
+                        )
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = showCustomInput,
+                        onClick = null
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.custom))
+                }
+
+                // 自定义输入框
+                if (showCustomInput) {
+                    OutlinedTextField(
+                        value = customValue,
+                        onValueChange = { newValue ->
+                            if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                                customValue = newValue
+                            }
+                        },
+                        label = { Text(stringResource(R.string.enter_minutes)) },
+                        suffix = { Text(stringResource(R.string.minutes_label)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val result = if (showCustomInput) {
+                        customValue.toIntOrNull()
+                    } else {
+                        selectedPreset
+                    }
+                    onConfirm(result)
+                },
+                enabled = if (showCustomInput) {
+                    customValue.toIntOrNull()?.let { it in 1..1440 } == true
+                } else {
+                    true
+                }
+            ) {
+                Text(stringResource(R.string.confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+// ========== 以下为旧组件，保留以备参考 ==========
+
+/**
+ * [已弃用] 每日限额设置
+ * 包含"完全禁止"快捷选项（无限制+强制关闭模式）
+ */
+@Composable
+private fun DailyLimitSection(
+    currentLimit: Int?,
+    currentMode: String,
+    onLimitChange: (Int?) -> Unit,
+    onCompletelyBlocked: () -> Unit
+) {
+    var showCustomDialog by remember { mutableStateOf(false) }
+
+    // 检查是否为完全禁止模式
+    val isCompletelyBlocked = currentLimit == null && currentMode == "strict"
+
+    // 预设选项
+    val presetOptions = listOf(
+        null to "无限制",
+        15 to "15 分钟",
+        30 to "30 分钟",
+        60 to "1 小时",
+        120 to "2 小时"
+    )
+
+    // 检查当前值是否在预设中（排除完全禁止的情况）
+    val isCustomValue = !isCompletelyBlocked && currentLimit != null && presetOptions.none { it.first == currentLimit }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .selectableGroup()
+    ) {
+        // 完全禁止选项（置顶，带特殊样式）
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .selectable(
+                    selected = isCompletelyBlocked,
+                    onClick = { onCompletelyBlocked() },
+                    role = Role.RadioButton
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = isCompletelyBlocked,
+                onClick = null,
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = MaterialTheme.colorScheme.error
+                )
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "完全禁止",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (isCompletelyBlocked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (isCompletelyBlocked) FontWeight.Medium else FontWeight.Normal
+                )
+                Text(
+                    text = "打开应用即被阻止",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        ListDivider(startIndent = 52.dp)
+
+        // 预设选项
+        presetOptions.forEach { (value, label) ->
+            // 无限制选项：只有当 limitMode 不是 strict 时才选中
+            val selected = if (value == null) {
+                currentLimit == null && currentMode != "strict"
+            } else {
+                currentLimit == value
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .selectable(
+                        selected = selected,
+                        onClick = { onLimitChange(value) },
+                        role = Role.RadioButton
+                    )
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = selected,
+                    onClick = null
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            ListDivider(startIndent = 52.dp)
+        }
+
+        // 自定义选项
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .selectable(
+                    selected = isCustomValue,
+                    onClick = { showCustomDialog = true },
+                    role = Role.RadioButton
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = isCustomValue,
+                onClick = null
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = "自定义",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            if (isCustomValue && currentLimit != null) {
+                Text(
+                    text = "$currentLimit 分钟",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        ListDivider(startIndent = 0.dp)
+    }
+
+    // 自定义输入对话框
+    if (showCustomDialog) {
+        CustomLimitDialog(
+            currentValue = currentLimit ?: 30,
+            onDismiss = { showCustomDialog = false },
+            onConfirm = { minutes ->
+                onLimitChange(minutes)
+                showCustomDialog = false
+            }
+        )
+    }
 }
 
 @Composable
-private fun CountdownSliderCard(
+private fun CustomLimitDialog(
     currentValue: Int,
-    onValueChange: (Int) -> Unit
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
+    var inputValue by remember { mutableStateOf(currentValue.toString()) }
+    val isValid = inputValue.toIntOrNull()?.let { it in 1..1440 } == true
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("设置每日限额") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = inputValue,
+                    onValueChange = { newValue ->
+                        if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                            inputValue = newValue
+                        }
+                    },
+                    label = { Text("分钟数") },
+                    suffix = { Text("分钟") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    isError = inputValue.isNotEmpty() && !isValid,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (inputValue.isNotEmpty() && !isValid) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "请输入 1-1440 之间的数字",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { inputValue.toIntOrNull()?.let { onConfirm(it) } },
+                enabled = isValid
+            ) {
+                Text("确定")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
+/**
+ * 限制模式选择
+ * 完全禁止模式时此区域禁用
+ */
+@Composable
+private fun LimitModeSection(
+    currentMode: String,
+    isCompletelyBlocked: Boolean,
+    onModeChange: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .selectableGroup()
+    ) {
+        // 完全禁止时显示提示
+        if (isCompletelyBlocked) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "倒计时",
+                    text = "已选择完全禁止模式",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            ListDivider(startIndent = 0.dp)
+            return@Column
+        }
+
+        // 软提醒
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .selectable(
+                    selected = currentMode == "soft",
+                    onClick = { onModeChange("soft") },
+                    role = Role.RadioButton
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = currentMode == "soft",
+                onClick = null
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "软提醒",
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = "$currentValue 秒",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    text = "超时后提醒，但允许继续使用",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
 
-            Spacer(modifier = Modifier.height(8.dp))
+        ListDivider(startIndent = 52.dp)
 
-            Slider(
-                value = currentValue.toFloat(),
-                onValueChange = { onValueChange(it.toInt()) },
-                valueRange = 3f..30f,
-                steps = 26
+        // 强制关闭
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .selectable(
+                    selected = currentMode == "strict",
+                    onClick = { onModeChange("strict") },
+                    role = Role.RadioButton
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = currentMode == "strict",
+                onClick = null
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "强制关闭",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = "超时后今日无法再使用该应用",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        ListDivider(startIndent = 0.dp)
+    }
+}
+
+/**
+ * 视频应用模式开关
+ * 开启后使用定时器主动触发弹窗检查，适用于抖音、B站等短视频应用
+ */
+@Composable
+private fun VideoAppModeSection(
+    isVideoApp: Boolean,
+    onVideoAppModeChange: (Boolean) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onVideoAppModeChange(!isVideoApp) }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.video_mode),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = if (isVideoApp) stringResource(R.string.video_mode_enabled) else stringResource(R.string.video_mode_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isVideoApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = isVideoApp,
+                onCheckedChange = onVideoAppModeChange
             )
         }
+        ListDivider(startIndent = 0.dp)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RedirectAppSelector(
+private fun RedirectSection(
     currentRedirect: String?,
     installedApps: List<AppInfo>,
     currentPackage: String,
     onRedirectSelected: (String?) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var showAppPicker by remember { mutableStateOf(false) }
+    val selectedApp = installedApps.find { it.packageName == currentRedirect }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .clickable { showAppPicker = true }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "跳转应用",
-                style = MaterialTheme.typography.bodyLarge
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = it }
-            ) {
-                val selectedApp = installedApps.find { it.packageName == currentRedirect }
-
-                OutlinedTextField(
-                    value = selectedApp?.appName ?: "无",
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
-                )
-
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("无") },
-                        onClick = {
-                            onRedirectSelected(null)
-                            expanded = false
-                        }
-                    )
-
-                    installedApps
-                        .filter { it.packageName != currentPackage }
-                        .take(20) // Limit to avoid performance issues
-                        .forEach { app ->
-                            DropdownMenuItem(
-                                text = { Text(app.appName) },
-                                onClick = {
-                                    onRedirectSelected(app.packageName)
-                                    expanded = false
-                                }
-                            )
-                        }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DailyLimitCard(
-    currentLimit: Int?,
-    onLimitChange: (Int?) -> Unit
-) {
-    var isUnlimited by remember(currentLimit) { mutableStateOf(currentLimit == null) }
-    var sliderValue by remember(currentLimit) { mutableStateOf((currentLimit ?: 30).toFloat()) }
-
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "每日限额",
+                    text = stringResource(R.string.redirect_app),
                     style = MaterialTheme.typography.bodyLarge
                 )
-                if (!isUnlimited) {
-                    Text(
-                        text = "${sliderValue.toInt()} 分钟",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (!isUnlimited) {
-                Slider(
-                    value = sliderValue,
-                    onValueChange = { sliderValue = it },
-                    onValueChangeFinished = {
-                        onLimitChange(sliderValue.toInt())
-                    },
-                    valueRange = 5f..120f,
-                    steps = 22
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = isUnlimited,
-                    onClick = {
-                        isUnlimited = true
-                        onLimitChange(null)
-                    }
-                )
                 Text(
-                    text = "无限制",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(start = 8.dp)
+                    text = stringResource(R.string.redirect_app_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-    }
-}
 
-@Composable
-private fun LimitModeSelector(
-    currentMode: String,
-    onModeChange: (String) -> Unit
-) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .selectableGroup()
-        ) {
+            // 当前选择
             Text(
-                text = "超时模式",
-                style = MaterialTheme.typography.bodyLarge
+                text = selectedApp?.appName ?: stringResource(R.string.none),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .selectable(
-                        selected = currentMode == "soft",
-                        onClick = { onModeChange("soft") },
-                        role = Role.RadioButton
-                    )
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = currentMode == "soft",
-                    onClick = null
-                )
-                Column(modifier = Modifier.padding(start = 12.dp)) {
-                    Text(
-                        text = "软提醒",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = "超时后提醒，但允许继续使用",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .selectable(
-                        selected = currentMode == "strict",
-                        onClick = { onModeChange("strict") },
-                        role = Role.RadioButton
-                    )
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = currentMode == "strict",
-                    onClick = null
-                )
-                Column(modifier = Modifier.padding(start = 12.dp)) {
-                    Text(
-                        text = "强制关闭",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = "超时后今日无法再使用该应用",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
+
+        ListDivider(startIndent = 0.dp)
+    }
+
+    // 应用选择对话框
+    if (showAppPicker) {
+        AppPickerDialog(
+            installedApps = installedApps,
+            currentPackage = currentPackage,
+            currentSelection = currentRedirect,
+            onDismiss = { showAppPicker = false },
+            onAppSelected = { packageName ->
+                onRedirectSelected(packageName)
+                showAppPicker = false
+            }
+        )
     }
 }
 
+/**
+ * 应用选择对话框
+ * 支持搜索过滤，显示所有可用应用
+ */
 @Composable
-private fun UsageStatsCard(
-    todayUsage: Int,
-    weeklyAverage: Int
+private fun AppPickerDialog(
+    installedApps: List<AppInfo>,
+    currentPackage: String,
+    currentSelection: String?,
+    onDismiss: () -> Unit,
+    onAppSelected: (String?) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+    var searchQuery by remember { mutableStateOf("") }
+
+    // 过滤应用列表
+    val filteredApps = remember(searchQuery, installedApps) {
+        val query = searchQuery.trim().lowercase()
+        installedApps
+            .filter { it.packageName != currentPackage }
+            .filter { app ->
+                if (query.isEmpty()) true
+                else app.appName.lowercase().contains(query) ||
+                     app.packageName.lowercase().contains(query)
+            }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.select_redirect_app)) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "今日使用",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                // 搜索框
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text(stringResource(R.string.search_apps_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // "无" 选项
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onAppSelected(null) }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = currentSelection == null,
+                        onClick = { onAppSelected(null) }
                     )
-                    Text(
-                        text = "$todayUsage 分钟",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(stringResource(R.string.no_redirect))
                 }
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "本周平均",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "$weeklyAverage 分钟/天",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
+                ListDivider(startIndent = 0.dp)
+
+                // 应用列表（使用 LazyColumn 支持滚动）
+                LazyColumn(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    items(filteredApps.size) { index ->
+                        val app = filteredApps[index]
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onAppSelected(app.packageName) }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = currentSelection == app.packageName,
+                                onClick = { onAppSelected(app.packageName) }
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            if (app.icon != null) {
+                                Image(
+                                    painter = rememberDrawablePainter(drawable = app.icon),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                            }
+
+                            Column {
+                                Text(
+                                    text = app.appName,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+
+                    if (filteredApps.isEmpty() && searchQuery.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.no_apps_found),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(vertical = 16.dp)
+                            )
+                        }
+                    }
                 }
             }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
         }
-    }
+    )
 }

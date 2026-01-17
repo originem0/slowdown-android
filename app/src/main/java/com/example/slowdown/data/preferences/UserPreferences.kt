@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -22,6 +23,7 @@ class UserPreferences(private val context: Context) {
         val MIUI_BACKGROUND_POPUP_CONFIRMED = booleanPreferencesKey("miui_background_popup_confirmed")
         val MIUI_BATTERY_SAVER_CONFIRMED = booleanPreferencesKey("miui_battery_saver_confirmed")
         val MIUI_LOCK_APP_CONFIRMED = booleanPreferencesKey("miui_lock_app_confirmed")
+        val APP_LANGUAGE = stringPreferencesKey("app_language")
     }
 
     val serviceEnabled: Flow<Boolean> = context.dataStore.data
@@ -84,6 +86,15 @@ class UserPreferences(private val context: Context) {
     suspend fun setMiuiLockAppConfirmed(confirmed: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[MIUI_LOCK_APP_CONFIRMED] = confirmed
+        }
+    }
+
+    val appLanguage: Flow<String> = context.dataStore.data
+        .map { preferences -> preferences[APP_LANGUAGE] ?: "en" }
+
+    suspend fun setAppLanguage(language: String) {
+        context.dataStore.edit { preferences ->
+            preferences[APP_LANGUAGE] = language
         }
     }
 }

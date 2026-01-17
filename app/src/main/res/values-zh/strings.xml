@@ -1,0 +1,162 @@
+<resources>
+    <string name="app_name">慢一点</string>
+    <string name="accessibility_service_description">监控应用启动以提供数字正念干预</string>
+
+    <!-- Dashboard -->
+    <string name="protection_active">守护中</string>
+    <string name="protection_paused">已暂停</string>
+    <string name="today">今日</string>
+    <string name="intercepts">次拦截</string>
+    <string name="min_saved">分钟节省</string>
+    <string name="weekly_mindful_moments">本周趋势</string>
+    <string name="most_intercepted">最常拦截</string>
+    <string name="view_all_apps">查看全部应用</string>
+    <string name="no_data_yet">暂无数据</string>
+    <string name="weekly_total">本周总计</string>
+    <string name="interrupts">次</string>
+
+    <!-- App List -->
+    <string name="protected_apps">已监控</string>
+    <string name="available_apps">可添加</string>
+    <string name="label_protected">已监控</string>
+    <string name="label_available">可添加</string>
+    <string name="search_apps">搜索应用名称</string>
+    <string name="tracking_only">仅统计</string>
+    <string name="strict_mode">严格限制</string>
+    <string name="gentle_mode">温和提醒</string>
+    <string name="remove_protection">移除监控</string>
+    <string name="remove_protection_confirm">确定要移除对「%s」的监控吗？</string>
+    <string name="remove">移除</string>
+    <string name="cancel">取消</string>
+
+    <!-- Settings -->
+    <string name="settings">设置</string>
+    <string name="system_permissions">系统权限</string>
+    <string name="accessibility_service">无障碍服务</string>
+    <string name="accessibility_subtitle">用于检测应用启动</string>
+    <string name="overlay_permission">悬浮窗权限</string>
+    <string name="overlay_subtitle">用于显示干预界面</string>
+    <string name="battery_optimization">忽略电池优化</string>
+    <string name="battery_subtitle">防止服务被系统杀死</string>
+    <string name="usage_stats">使用统计权限</string>
+    <string name="usage_subtitle">用于获取应用使用时长数据</string>
+    <string name="enabled">已开启</string>
+    <string name="go_enable">去开启</string>
+    <string name="permissions_complete">权限配置完成</string>
+    <string name="all_permissions_granted">所有必要权限已开启</string>
+    <string name="permissions_needed">需要完成权限配置</string>
+    <string name="please_enable_permissions">请开启下方未启用的权限</string>
+
+    <!-- Intervention Settings -->
+    <string name="intervention_settings">干预设置</string>
+    <string name="default_countdown">默认倒计时</string>
+    <string name="countdown_subtitle">打开监控应用后的等待时间</string>
+    <string name="seconds">秒</string>
+    <string name="cooldown_time">冷却时间</string>
+    <string name="cooldown_subtitle">两次干预之间的最短间隔</string>
+    <string name="minutes">分钟</string>
+
+    <!-- Language -->
+    <string name="language_section">语言 / Language</string>
+    <string name="english">English</string>
+    <string name="chinese">简体中文</string>
+    <string name="switch_to_english">Tap to switch to English</string>
+    <string name="switch_to_chinese">点击切换到中文</string>
+
+    <!-- MIUI -->
+    <string name="miui_settings">MIUI 专属设置</string>
+    <string name="miui_settings_needed">MIUI 专属设置 (待配置)</string>
+    <string name="auto_start">自启动权限</string>
+    <string name="auto_start_subtitle">允许应用开机自启</string>
+    <string name="background_popup">后台弹出界面</string>
+    <string name="background_popup_subtitle">允许后台弹出干预界面（核心功能）</string>
+    <string name="battery_saver">省电策略</string>
+    <string name="battery_saver_subtitle">设为「无限制」防止后台服务被冻结</string>
+    <string name="lock_app">锁定应用</string>
+    <string name="lock_app_subtitle">在最近任务中下拉 SlowDown 卡片，点击「锁定」</string>
+    <string name="confirmed">已完成</string>
+    <string name="confirm">已开启</string>
+    <string name="refresh">刷新</string>
+
+    <!-- MIUI Permission Detection -->
+    <string name="permission_detected_on">已检测到权限已开启</string>
+    <string name="permission_detected_off">检测到权限未开启</string>
+    <string name="miui_popup_required_title">必须开启「后台弹出界面」权限</string>
+    <string name="miui_popup_steps">操作步骤：\n1. 点击上方「去开启」\n2. 找到「其他权限」或「权限管理」\n3. 找到「后台弹出界面」\n4. 设置为「允许」</string>
+
+    <!-- Dashboard Screen -->
+    <string name="setup_required">需要完成设置才能启用保护</string>
+    <string name="miui_permissions_needed">MIUI 需要配置后台权限</string>
+
+    <!-- Statistics Screen -->
+    <string name="weekly_trend">本周趋势</string>
+    <string name="app_details">各应用详情</string>
+    <string name="no_usage_today">当日暂无使用记录</string>
+    <string name="compared_to_yesterday_more">比昨天多%s</string>
+    <string name="compared_to_yesterday_less">比昨天少%s</string>
+    <string name="this_month">本月</string>
+    <string name="month_total_usage">本月总计使用时间</string>
+
+    <!-- App List Screen -->
+    <string name="protected_apps_count">已监控 (%d)</string>
+    <string name="available_apps_count">可添加 (%d)</string>
+
+    <!-- App Detail Screen -->
+    <string name="app_settings">应用设置</string>
+    <string name="back">返回</string>
+    <string name="today_usage">今日使用</string>
+    <string name="restriction_mode">限制模式</string>
+    <string name="other_settings">其他设置</string>
+    <string name="tracking_only_title">仅统计</string>
+    <string name="tracking_only_desc">只记录使用时间，不做任何干预</string>
+    <string name="gentle_reminder_title">温和提醒</string>
+    <string name="gentle_reminder_desc">达到限额后提醒，但可继续使用</string>
+    <string name="gentle_reminder_with_limit">每日 %d 分钟后提醒，可继续使用</string>
+    <string name="gentle_reminder_every_open">每次打开应用时深呼吸提醒</string>
+    <string name="strict_limit_title">严格限制</string>
+    <string name="strict_limit_desc">达到限额后今日禁止继续使用</string>
+    <string name="strict_limit_with_limit">每日 %d 分钟后禁止使用</string>
+    <string name="completely_blocked_title">完全禁止</string>
+    <string name="completely_blocked_desc">打开应用即被阻止，无法使用</string>
+    <string name="video_mode">短视频模式</string>
+    <string name="video_mode_enabled">已启用：每 30 秒检查一次</string>
+    <string name="video_mode_desc">适用于抖音、B站等刷视频应用</string>
+    <string name="redirect_app">跳转应用</string>
+    <string name="redirect_app_desc">干预时跳转到指定应用</string>
+    <string name="none">无</string>
+    <string name="set_daily_limit">设置每日限额</string>
+    <string name="no_limit">无限制</string>
+    <string name="no_limit_remind_every_open">无限制（每次打开都提醒）</string>
+    <string name="minutes_format">%d 分钟</string>
+    <string name="hour_format">%d 小时</string>
+    <string name="hours_format">%d 小时</string>
+    <string name="custom">自定义</string>
+    <string name="enter_minutes">分钟数</string>
+    <string name="minutes_label">分钟</string>
+    <string name="minute_unit">分钟</string>
+    <string name="minutes_per_day">分钟/天</string>
+    <string name="weekly_average">本周平均</string>
+    <string name="select_redirect_app">选择跳转应用</string>
+    <string name="search_apps_hint">搜索应用...</string>
+    <string name="no_redirect">无（不跳转）</string>
+    <string name="no_apps_found">未找到匹配的应用</string>
+    <string name="input_range_error">请输入 1-1440 之间的数字</string>
+    <string name="already_blocked_mode">已选择完全禁止模式</string>
+    <string name="soft_reminder">软提醒</string>
+    <string name="soft_reminder_desc">超时后提醒，但允许继续使用</string>
+    <string name="force_close">强制关闭</string>
+    <string name="force_close_desc">超时后今日无法再使用该应用</string>
+    <string name="completely_blocked_simple">完全禁止</string>
+    <string name="blocked_on_open">打开应用即被阻止</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_home">首页</string>
+    <string name="nav_apps">应用</string>
+    <string name="nav_statistics">统计</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- Duration Formatting -->
+    <string name="duration_hours_minutes">%1$d小时 %2$d分钟</string>
+    <string name="duration_hours_only">%d小时</string>
+    <string name="duration_minutes_only">%d分钟</string>
+</resources>

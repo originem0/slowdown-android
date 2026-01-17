@@ -57,15 +57,6 @@ class AppDetailViewModel(
         }
     }
 
-    fun updateCountdown(seconds: Int) {
-        viewModelScope.launch {
-            _monitoredApp.value?.let { app ->
-                val updated = app.copy(countdownSeconds = seconds)
-                repository.updateMonitoredApp(updated)
-            }
-        }
-    }
-
     fun updateRedirectApp(redirectPackage: String?) {
         viewModelScope.launch {
             _monitoredApp.value?.let { app ->
@@ -93,10 +84,64 @@ class AppDetailViewModel(
         }
     }
 
+    /**
+     * 设置完全禁止模式（无限制+强制关闭）
+     * 选择此模式后，打开应用就会被阻止
+     */
+    fun setCompletelyBlocked() {
+        viewModelScope.launch {
+            _monitoredApp.value?.let { app ->
+                val updated = app.copy(
+                    dailyLimitMinutes = null,
+                    limitMode = "strict"
+                )
+                repository.updateMonitoredApp(updated)
+            }
+        }
+    }
+
+    /**
+     * 检查当前是否为完全禁止模式
+     */
+    fun isCompletelyBlocked(): Boolean {
+        val app = _monitoredApp.value ?: return false
+        return app.dailyLimitMinutes == null && app.limitMode == "strict"
+    }
+
     fun updateEnabled(enabled: Boolean) {
         viewModelScope.launch {
             _monitoredApp.value?.let { app ->
                 val updated = app.copy(isEnabled = enabled)
+                repository.updateMonitoredApp(updated)
+            }
+        }
+    }
+
+    /**
+     * 原子更新限制模式 - 一次性设置所有相关字段
+     * 避免多次独立更新导致的状态竞争问题
+     */
+    fun updateRestrictionMode(isEnabled: Boolean, limitMode: String, dailyLimitMinutes: Int?) {
+        viewModelScope.launch {
+            _monitoredApp.value?.let { app ->
+                val updated = app.copy(
+                    isEnabled = isEnabled,
+                    limitMode = limitMode,
+                    dailyLimitMinutes = dailyLimitMinutes
+                )
+                repository.updateMonitoredApp(updated)
+            }
+        }
+    }
+
+    /**
+     * 更新视频应用模式
+     * 视频应用使用定时器主动触发弹窗检查，而非依赖 Activity 切换事件
+     */
+    fun updateVideoAppMode(isVideoApp: Boolean) {
+        viewModelScope.launch {
+            _monitoredApp.value?.let { app ->
+                val updated = app.copy(isVideoApp = isVideoApp)
                 repository.updateMonitoredApp(updated)
             }
         }

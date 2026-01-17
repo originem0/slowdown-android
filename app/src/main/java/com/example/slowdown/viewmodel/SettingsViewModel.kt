@@ -33,6 +33,9 @@ class SettingsViewModel(
     private val miuiLockAppConfirmed: StateFlow<Boolean> = repository.miuiLockAppConfirmed
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val currentLanguage: StateFlow<String> = repository.appLanguage
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "en")
+
     private val _permissionState = MutableStateFlow(PermissionState())
     val permissionState: StateFlow<PermissionState> = _permissionState.asStateFlow()
 
@@ -88,6 +91,14 @@ class SettingsViewModel(
         }
     }
 
+    fun toggleLanguage() {
+        viewModelScope.launch {
+            val current = currentLanguage.value
+            val newLang = if (current == "en") "zh" else "en"
+            repository.setAppLanguage(newLang)
+        }
+    }
+
     fun openAccessibilitySettings() = PermissionHelper.openAccessibilitySettings(context)
     fun openOverlaySettings() = PermissionHelper.openOverlaySettings(context)
     fun openBatterySettings() = PermissionHelper.openBatteryOptimizationSettings(context)
@@ -99,6 +110,12 @@ class SettingsViewModel(
     fun confirmMiuiAutoStart() {
         viewModelScope.launch {
             repository.setMiuiAutoStartConfirmed(true)
+        }
+    }
+
+    fun resetMiuiAutoStart() {
+        viewModelScope.launch {
+            repository.setMiuiAutoStartConfirmed(false)
         }
     }
 
@@ -114,9 +131,21 @@ class SettingsViewModel(
         }
     }
 
+    fun resetMiuiBatterySaver() {
+        viewModelScope.launch {
+            repository.setMiuiBatterySaverConfirmed(false)
+        }
+    }
+
     fun confirmMiuiLockApp() {
         viewModelScope.launch {
             repository.setMiuiLockAppConfirmed(true)
+        }
+    }
+
+    fun resetMiuiLockApp() {
+        viewModelScope.launch {
+            repository.setMiuiLockAppConfirmed(false)
         }
     }
 

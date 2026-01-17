@@ -6,22 +6,36 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.slowdown.SlowDownApp
 import com.example.slowdown.service.OverlayService
-import com.example.slowdown.ui.theme.SlowDownTheme
+import com.example.slowdown.ui.theme.*
 import com.example.slowdown.util.NotificationHelper
 import com.example.slowdown.util.PackageUtils
 import com.example.slowdown.viewmodel.OverlayViewModel
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 class OverlayActivity : ComponentActivity() {
 
@@ -31,6 +45,10 @@ class OverlayActivity : ComponentActivity() {
         const val EXTRA_APP_NAME = "app_name"
         const val EXTRA_COUNTDOWN_SECONDS = "countdown_seconds"
         const val EXTRA_REDIRECT_PACKAGE = "redirect_package"
+        const val EXTRA_REDIRECT_APP_NAME = "redirect_app_name"
+        const val EXTRA_IS_LIMIT_REACHED = "is_limit_reached"  // 是否已达限额
+        const val EXTRA_USED_MINUTES = "used_minutes"  // 已使用分钟数
+        const val EXTRA_LIMIT_MINUTES = "limit_minutes"  // 限额分钟数
     }
 
     private val viewModel: OverlayViewModel by viewModels {
@@ -41,13 +59,13 @@ class OverlayActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "[Overlay] onCreate called")
 
-        // 取消通知（因为 Full-Screen Intent 已经启动了这个 Activity）
+        // 取消通知
         NotificationHelper.cancelNotification(this)
 
-        // 停止 OverlayService（因为 Activity 已经显示）
+        // 停止 OverlayService
         stopService(android.content.Intent(this, OverlayService::class.java))
 
-        // 设置窗口属性 - 关键：让 Activity 显示在锁屏上方并点亮屏幕
+        // 设置窗口属性
         window.addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
@@ -63,20 +81,28 @@ class OverlayActivity : ComponentActivity() {
         val appName = intent.getStringExtra(EXTRA_APP_NAME) ?: packageName
         val countdownSeconds = intent.getIntExtra(EXTRA_COUNTDOWN_SECONDS, 10)
         val redirectPackage = intent.getStringExtra(EXTRA_REDIRECT_PACKAGE)
+        val redirectAppName = intent.getStringExtra(EXTRA_REDIRECT_APP_NAME) ?: "替代应用"
+        val isLimitReached = intent.getBooleanExtra(EXTRA_IS_LIMIT_REACHED, false)
+        val usedMinutes = intent.getIntExtra(EXTRA_USED_MINUTES, 0)
+        val limitMinutes = intent.getIntExtra(EXTRA_LIMIT_MINUTES, 0)
 
-        Log.d(TAG, "[Overlay] packageName=$packageName, appName=$appName, countdown=$countdownSeconds")
+        Log.d(TAG, "[Overlay] packageName=$packageName, appName=$appName, countdown=$countdownSeconds, isLimitReached=$isLimitReached")
 
         viewModel.startCountdown(packageName, appName, countdownSeconds)
 
         setContent {
             SlowDownTheme {
-                OverlayScreen(
+                MindfulOverlayScreen(
                     viewModel = viewModel,
                     appName = appName,
+                    totalSeconds = countdownSeconds,
                     redirectPackage = redirectPackage,
+                    redirectAppName = redirectAppName,
+                    isLimitReached = isLimitReached,
+                    usedMinutes = usedMinutes,
+                    limitMinutes = limitMinutes,
                     onContinue = {
                         viewModel.recordAndFinish("continued")
-                        // 启动目标应用，让用户继续使用
                         PackageUtils.launchApp(this, packageName)
                         finish()
                     },
@@ -104,10 +130,15 @@ class OverlayActivity : ComponentActivity() {
 }
 
 @Composable
-private fun OverlayScreen(
+private fun MindfulOverlayScreen(
     viewModel: OverlayViewModel,
     appName: String,
+    totalSeconds: Int,
     redirectPackage: String?,
+    redirectAppName: String,
+    isLimitReached: Boolean,
+    usedMinutes: Int,
+    limitMinutes: Int,
     onContinue: () -> Unit,
     onRedirect: (String) -> Unit,
     onCancel: () -> Unit
@@ -115,83 +146,276 @@ private fun OverlayScreen(
     val countdown by viewModel.countdown.collectAsState()
     val canContinue by viewModel.canContinue.collectAsState()
 
+    // 呼吸动画
+    val infiniteTransition = rememberInfiniteTransition(label = "breath")
+    val breathScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "breathScale"
+    )
+
+    // 渐变背景色 - 已达限额时用更暖的色调
+    val backgroundGradient = if (isLimitReached) {
+        Brush.verticalGradient(
+            colors = listOf(
+                Color(0xFF2A2632),  // 偏紫的深色
+                Color(0xFF352E42),
+                Color(0xFF3D3852)
+            )
+        )
+    } else {
+        Brush.verticalGradient(
+            colors = listOf(
+                Color(0xFF1A2632),  // 深蓝灰
+                Color(0xFF243442),  // 较浅的深蓝灰
+                Color(0xFF2D4A5E)   // 带一点青色的深蓝
+            )
+        )
+    }
+
     Box(
-        modifier = Modifier.fillMaxSize().background(Color.Black),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundGradient),
         contentAlignment = Alignment.Center
     ) {
+        // 背景装饰 - 柔和的圆形
+        BackgroundDecorations(breathScale)
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(32.dp)
         ) {
-            Text(
-                text = "你正在打开",
-                color = Color.White.copy(alpha = 0.7f),
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = appName,
-                color = Color.White,
-                style = MaterialTheme.typography.headlineLarge
-            )
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            Text(
-                text = if (canContinue) "可以继续了" else countdown.toString(),
-                color = if (canContinue) Color.Green else Color.White,
-                fontSize = if (canContinue) 24.sp else 72.sp,
-                textAlign = TextAlign.Center
-            )
-
-            if (!canContinue) {
-                Spacer(modifier = Modifier.height(8.dp))
+            // 顶部提示语 - 根据是否达到限额显示不同文案
+            if (isLimitReached) {
                 Text(
-                    text = "请等待倒计时结束",
-                    color = Color.White.copy(alpha = 0.5f),
+                    text = "休息一下",
+                    color = Color(0xFFFFB74D).copy(alpha = 0.7f),  // 橙色
+                    style = MaterialTheme.typography.titleMedium,
+                    letterSpacing = 4.sp
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "$appName 已达到今日限额",
+                    color = Color.White.copy(alpha = 0.9f),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 显示使用时间
+                Text(
+                    text = "今日已使用 $usedMinutes 分钟",
+                    color = Color.White.copy(alpha = 0.6f),
                     style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                Text(
+                    text = "深呼吸",
+                    color = Color.White.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.titleMedium,
+                    letterSpacing = 4.sp
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "你正要打开 $appName",
+                    color = Color.White.copy(alpha = 0.8f),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center
                 )
             }
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // Redirect button (if configured)
+            // 呼吸圈 + 倒计时
+            BreathingCountdownCircle(
+                countdown = countdown,
+                totalSeconds = totalSeconds,
+                canContinue = canContinue,
+                breathScale = breathScale,
+                isLimitReached = isLimitReached
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 提示文字
+            Text(
+                text = if (canContinue) "可以继续了" else "跟随圆圈呼吸...",
+                color = if (canContinue) Sage400 else Color.White.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(56.dp))
+
+            // 跳转替代应用按钮
             if (redirectPackage != null) {
                 Button(
                     onClick = { onRedirect(redirectPackage) },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Sage500
+                    )
                 ) {
-                    Text("打开微信读书", fontSize = 18.sp)
+                    Text(
+                        text = "打开 $redirectAppName",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Continue button
+            // 继续使用按钮
             Button(
                 onClick = onContinue,
                 enabled = canContinue,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (canContinue) MaterialTheme.colorScheme.primary else Color.Gray,
-                    disabledContainerColor = Color.Gray.copy(alpha = 0.5f)
+                    containerColor = if (canContinue) Teal500 else Color.Gray.copy(alpha = 0.3f),
+                    disabledContainerColor = Color.Gray.copy(alpha = 0.2f)
                 )
             ) {
                 Text(
-                    text = if (canContinue) "继续访问" else "等待中...",
-                    fontSize = 18.sp
+                    text = if (canContinue) "继续使用 $appName" else "请稍等 ${countdown}s",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = if (canContinue) Color.White else Color.White.copy(alpha = 0.5f)
                 )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Cancel link
+            // 返回按钮 - 更低调
             TextButton(onClick = onCancel) {
-                Text(text = "返回桌面", color = Color.White.copy(alpha = 0.7f))
+                Text(
+                    text = "放弃，返回桌面",
+                    color = Color.White.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
     }
+}
+
+@Composable
+private fun BackgroundDecorations(breathScale: Float) {
+    // 柔和的背景圆形装饰
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val center = Offset(size.width / 2, size.height / 2 - 100)
+
+        // 外层大圆 - 非常淡
+        drawCircle(
+            color = Color.White.copy(alpha = 0.03f),
+            radius = 280.dp.toPx() * breathScale,
+            center = center
+        )
+
+        // 中层圆
+        drawCircle(
+            color = Color.White.copy(alpha = 0.02f),
+            radius = 220.dp.toPx() * breathScale,
+            center = center
+        )
+    }
+}
+
+@Composable
+private fun BreathingCountdownCircle(
+    countdown: Int,
+    totalSeconds: Int,
+    canContinue: Boolean,
+    breathScale: Float,
+    isLimitReached: Boolean = false
+) {
+    val progress = if (totalSeconds > 0) {
+        1f - (countdown.toFloat() / totalSeconds)
+    } else 1f
+
+    // 进度动画
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(300),
+        label = "progress"
+    )
+
+    // 根据是否达到限额使用不同的颜色
+    val progressColor = if (isLimitReached) Color(0xFFFFB74D) else Teal500  // 橙色 vs 青色
+
+    Box(
+        modifier = Modifier.size((180 * breathScale).dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokeWidth = 8.dp.toPx()
+            val radius = (size.minDimension - strokeWidth) / 2
+            val center = Offset(size.width / 2, size.height / 2)
+
+            // 背景圈 - 淡色
+            drawCircle(
+                color = Color.White.copy(alpha = 0.1f),
+                radius = radius,
+                center = center,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+
+            // 进度圈 - 渐变
+            if (animatedProgress > 0) {
+                drawArc(
+                    brush = Brush.sweepGradient(
+                        colors = if (isLimitReached) {
+                            listOf(Color(0xFFFFB74D), Color(0xFFFF8A65), Color(0xFFFFB74D))
+                        } else {
+                            listOf(Teal500, Sage400, Teal500)
+                        },
+                        center = center
+                    ),
+                    startAngle = -90f,
+                    sweepAngle = animatedProgress * 360f,
+                    useCenter = false,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                )
+            }
+        }
+
+        // 中心内容
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            if (canContinue) {
+                Text(
+                    text = "✓",
+                    fontSize = 48.sp,
+                    color = if (isLimitReached) Color(0xFFFFB74D) else Sage400
+                )
+            } else {
+                Text(
+                    text = countdown.toString(),
+                    fontSize = 56.sp,
+                    fontWeight = FontWeight.Light,
+                    color = Color.White
+                )
+            }
+        }
+    }
+}
+
+// 缓动函数
+private val EaseInOutSine: Easing = Easing { fraction ->
+    (-(cos(PI * fraction) - 1) / 2).toFloat()
 }

@@ -26,19 +26,28 @@ class OverlayService : Service() {
         const val EXTRA_APP_NAME = "app_name"
         const val EXTRA_COUNTDOWN_SECONDS = "countdown_seconds"
         const val EXTRA_REDIRECT_PACKAGE = "redirect_package"
+        const val EXTRA_IS_LIMIT_REACHED = "is_limit_reached"
+        const val EXTRA_USED_MINUTES = "used_minutes"
+        const val EXTRA_LIMIT_MINUTES = "limit_minutes"
 
         fun start(
             context: Context,
             packageName: String,
             appName: String,
             countdownSeconds: Int,
-            redirectPackage: String?
+            redirectPackage: String?,
+            isLimitReached: Boolean = false,
+            usedMinutes: Int = 0,
+            limitMinutes: Int = 0
         ) {
             val intent = Intent(context, OverlayService::class.java).apply {
                 putExtra(EXTRA_PACKAGE_NAME, packageName)
                 putExtra(EXTRA_APP_NAME, appName)
                 putExtra(EXTRA_COUNTDOWN_SECONDS, countdownSeconds)
                 putExtra(EXTRA_REDIRECT_PACKAGE, redirectPackage)
+                putExtra(EXTRA_IS_LIMIT_REACHED, isLimitReached)
+                putExtra(EXTRA_USED_MINUTES, usedMinutes)
+                putExtra(EXTRA_LIMIT_MINUTES, limitMinutes)
             }
             context.startService(intent)
         }

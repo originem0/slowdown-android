@@ -94,9 +94,12 @@ object NotificationHelper {
         packageName: String,
         appName: String,
         countdownSeconds: Int,
-        redirectPackage: String?
+        redirectPackage: String?,
+        isLimitReached: Boolean = false,
+        usedMinutes: Int = 0,
+        limitMinutes: Int = 0
     ) {
-        Log.d(TAG, "[NotificationHelper] showInterventionNotification for $appName")
+        Log.d(TAG, "[NotificationHelper] showInterventionNotification for $appName, isLimitReached=$isLimitReached")
 
         // 创建打开 OverlayActivity 的 Intent
         val fullScreenIntent = Intent(context, OverlayActivity::class.java).apply {
@@ -107,6 +110,9 @@ object NotificationHelper {
             putExtra(OverlayActivity.EXTRA_APP_NAME, appName)
             putExtra(OverlayActivity.EXTRA_COUNTDOWN_SECONDS, countdownSeconds)
             putExtra(OverlayActivity.EXTRA_REDIRECT_PACKAGE, redirectPackage)
+            putExtra(OverlayActivity.EXTRA_IS_LIMIT_REACHED, isLimitReached)
+            putExtra(OverlayActivity.EXTRA_USED_MINUTES, usedMinutes)
+            putExtra(OverlayActivity.EXTRA_LIMIT_MINUTES, limitMinutes)
         }
 
         val fullScreenPendingIntent = PendingIntent.getActivity(
@@ -116,11 +122,17 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // 构建通知
+        // 构建通知 - 根据是否达到限额显示不同文案
+        val contentText = if (isLimitReached) {
+            "$appName 已达到今日限额"
+        } else {
+            "你正在打开 $appName"
+        }
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("慢下来")
-            .setContentText("你正在打开 $appName")
+            .setContentText(contentText)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM) // 关键：使用闹钟类别
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -213,8 +225,8 @@ object NotificationHelper {
         Log.d(TAG, "[NotificationHelper] showUsageWarningNotification for $appName, type: $warningType")
 
         val (title, content) = when (warningType) {
-            UsageWarningType.WARNING_80_PERCENT -> {
-                "使用时间提醒" to "$appName 已使用 80% 的每日限额"
+            UsageWarningType.SOFT_REMINDER -> {
+                "深呼吸提醒" to "$appName 已使用 80% 的每日限额，请注意休息"
             }
             UsageWarningType.LIMIT_REACHED_SOFT -> {
                 "已达每日限额" to "$appName 今日使用时间已达限额"

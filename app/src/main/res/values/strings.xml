@@ -1,4 +1,162 @@
 <resources>
     <string name="app_name">SlowDown</string>
-    <string name="accessibility_service_description">监控应用启动以提供数字正念干预</string>
+    <string name="accessibility_service_description">Monitors app launches to provide digital mindfulness interventions</string>
+
+    <!-- Dashboard -->
+    <string name="protection_active">Protection Active</string>
+    <string name="protection_paused">Protection Paused</string>
+    <string name="today">Today</string>
+    <string name="intercepts">Intercepts</string>
+    <string name="min_saved">Min Saved</string>
+    <string name="weekly_mindful_moments">Weekly Mindful Moments</string>
+    <string name="most_intercepted">Most Intercepted</string>
+    <string name="view_all_apps">View All Apps</string>
+    <string name="no_data_yet">No data yet</string>
+    <string name="weekly_total">Weekly Total</string>
+    <string name="interrupts">interrupts</string>
+
+    <!-- App List -->
+    <string name="protected_apps">Protected Apps</string>
+    <string name="available_apps">Available Apps</string>
+    <string name="label_protected">Protected</string>
+    <string name="label_available">Available</string>
+    <string name="search_apps">Search apps...</string>
+    <string name="tracking_only">Tracking Only</string>
+    <string name="strict_mode">Strict Mode</string>
+    <string name="gentle_mode">Gentle Mode</string>
+    <string name="remove_protection">Remove Protection?</string>
+    <string name="remove_protection_confirm">Are you sure you want to stop monitoring \"%s\"?</string>
+    <string name="remove">Remove</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="system_permissions">System Permissions</string>
+    <string name="accessibility_service">Accessibility Service</string>
+    <string name="accessibility_subtitle">Monitors app launches</string>
+    <string name="overlay_permission">Overlay Permission</string>
+    <string name="overlay_subtitle">For displaying intervention screens</string>
+    <string name="battery_optimization">Ignore Battery Optimization</string>
+    <string name="battery_subtitle">Prevents service from being killed</string>
+    <string name="usage_stats">Usage Stats Permission</string>
+    <string name="usage_subtitle">For tracking app usage time</string>
+    <string name="enabled">Enabled</string>
+    <string name="go_enable">Go Enable</string>
+    <string name="permissions_complete">Permissions Complete</string>
+    <string name="all_permissions_granted">All required permissions granted</string>
+    <string name="permissions_needed">Permissions Required</string>
+    <string name="please_enable_permissions">Please enable the permissions below</string>
+
+    <!-- Intervention Settings -->
+    <string name="intervention_settings">Intervention Settings</string>
+    <string name="default_countdown">Default Countdown</string>
+    <string name="countdown_subtitle">Wait time when opening monitored apps</string>
+    <string name="seconds">seconds</string>
+    <string name="cooldown_time">Cooldown Time</string>
+    <string name="cooldown_subtitle">Minimum interval between interventions</string>
+    <string name="minutes">minutes</string>
+
+    <!-- Language -->
+    <string name="language_section">Language / 语言</string>
+    <string name="english">English</string>
+    <string name="chinese">简体中文</string>
+    <string name="switch_to_english">Tap to switch to English</string>
+    <string name="switch_to_chinese">点击切换到中文</string>
+
+    <!-- MIUI -->
+    <string name="miui_settings">MIUI Settings</string>
+    <string name="miui_settings_needed">MIUI Settings (Setup Required)</string>
+    <string name="auto_start">Auto Start Permission</string>
+    <string name="auto_start_subtitle">Allow app to auto-start on boot</string>
+    <string name="background_popup">Background Popup</string>
+    <string name="background_popup_subtitle">Allow popup windows from background (Core Feature)</string>
+    <string name="battery_saver">Battery Saver Policy</string>
+    <string name="battery_saver_subtitle">Set to \"No Restrictions\" to prevent freezing</string>
+    <string name="lock_app">Lock App</string>
+    <string name="lock_app_subtitle">Swipe down on SlowDown card in recent tasks, tap \"Lock\"</string>
+    <string name="confirmed">Confirmed</string>
+    <string name="confirm">Confirm</string>
+    <string name="refresh">Refresh</string>
+
+    <!-- MIUI Permission Detection -->
+    <string name="permission_detected_on">Permission detected: enabled</string>
+    <string name="permission_detected_off">Permission detected: not enabled</string>
+    <string name="miui_popup_required_title">Background Popup Permission Required</string>
+    <string name="miui_popup_steps">Steps:\n1. Tap \"Go Enable\" above\n2. Find \"Other Permissions\" or \"Permission Management\"\n3. Find \"Background Popup\"\n4. Set to \"Allow\"</string>
+
+    <!-- Dashboard Screen -->
+    <string name="setup_required">Setup required to enable protection</string>
+    <string name="miui_permissions_needed">MIUI permissions needed for background</string>
+
+    <!-- Statistics Screen -->
+    <string name="weekly_trend">Weekly Trend</string>
+    <string name="app_details">App Details</string>
+    <string name="no_usage_today">No usage records today</string>
+    <string name="compared_to_yesterday_more">%s more than yesterday</string>
+    <string name="compared_to_yesterday_less">%s less than yesterday</string>
+    <string name="this_month">This Month</string>
+    <string name="month_total_usage">Monthly Total Usage</string>
+
+    <!-- App List Screen -->
+    <string name="protected_apps_count">Protected Apps (%d)</string>
+    <string name="available_apps_count">Available Apps (%d)</string>
+
+    <!-- App Detail Screen -->
+    <string name="app_settings">App Settings</string>
+    <string name="back">Back</string>
+    <string name="today_usage">Today\'s Usage</string>
+    <string name="restriction_mode">Restriction Mode</string>
+    <string name="other_settings">Other Settings</string>
+    <string name="tracking_only_title">Tracking Only</string>
+    <string name="tracking_only_desc">Only record usage time, no intervention</string>
+    <string name="gentle_reminder_title">Gentle Reminder</string>
+    <string name="gentle_reminder_desc">Remind when limit reached, can continue using</string>
+    <string name="gentle_reminder_with_limit">Remind after %d minutes daily, can continue</string>
+    <string name="gentle_reminder_every_open">Deep breathing reminder on each open</string>
+    <string name="strict_limit_title">Strict Limit</string>
+    <string name="strict_limit_desc">Block usage after limit reached today</string>
+    <string name="strict_limit_with_limit">Block after %d minutes daily</string>
+    <string name="completely_blocked_title">Completely Blocked</string>
+    <string name="completely_blocked_desc">Blocked immediately when opened</string>
+    <string name="video_mode">Short Video Mode</string>
+    <string name="video_mode_enabled">Enabled: Check every 30 seconds</string>
+    <string name="video_mode_desc">For TikTok, YouTube Shorts, etc.</string>
+    <string name="redirect_app">Redirect App</string>
+    <string name="redirect_app_desc">Open specified app during intervention</string>
+    <string name="none">None</string>
+    <string name="set_daily_limit">Set Daily Limit</string>
+    <string name="no_limit">No Limit</string>
+    <string name="no_limit_remind_every_open">No limit (remind on each open)</string>
+    <string name="minutes_format">%d minutes</string>
+    <string name="hour_format">%d hour</string>
+    <string name="hours_format">%d hours</string>
+    <string name="custom">Custom</string>
+    <string name="enter_minutes">Enter minutes</string>
+    <string name="minutes_label">minutes</string>
+    <string name="minute_unit">min</string>
+    <string name="minutes_per_day">min/day</string>
+    <string name="weekly_average">Weekly Average</string>
+    <string name="select_redirect_app">Select Redirect App</string>
+    <string name="search_apps_hint">Search apps...</string>
+    <string name="no_redirect">None (no redirect)</string>
+    <string name="no_apps_found">No matching apps found</string>
+    <string name="input_range_error">Please enter a number between 1-1440</string>
+    <string name="already_blocked_mode">Completely blocked mode selected</string>
+    <string name="soft_reminder">Soft Reminder</string>
+    <string name="soft_reminder_desc">Remind after timeout, but allow continue</string>
+    <string name="force_close">Force Close</string>
+    <string name="force_close_desc">Cannot use this app today after timeout</string>
+    <string name="completely_blocked_simple">Completely Blocked</string>
+    <string name="blocked_on_open">Blocked when opening</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_apps">Apps</string>
+    <string name="nav_statistics">Statistics</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Duration Formatting -->
+    <string name="duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="duration_hours_only">%dh</string>
+    <string name="duration_minutes_only">%dm</string>
 </resources>
