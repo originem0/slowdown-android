@@ -15,13 +15,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import android.app.Activity
+import com.example.slowdown.R
 import com.example.slowdown.ui.components.*
 import com.example.slowdown.viewmodel.SettingsViewModel
 import kotlinx.coroutines.delay
-import androidx.compose.ui.platform.LocalContext
-import android.app.Activity
-import androidx.compose.ui.res.stringResource
-import com.example.slowdown.R
 
 @Composable
 fun SettingsScreen(
@@ -33,19 +36,17 @@ fun SettingsScreen(
     val permissionState by viewModel.permissionState.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
 
-    LaunchedEffect(Unit) {
-        viewModel.refreshPermissions()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // 使用 repeatOnLifecycle 在每次 Resume 时刷新权限
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.refreshPermissions()
+        }
     }
 
-    // 计算权限状态
-    val allGranted = permissionState.accessibilityEnabled &&
-            permissionState.overlayEnabled &&
-            permissionState.batteryOptimizationDisabled &&
-            permissionState.usageStatsEnabled &&
-            (!permissionState.isMiui ||
-             (permissionState.miuiAutoStartConfirmed &&
-              permissionState.miuiBatterySaverConfirmed &&
-              permissionState.miuiLockAppConfirmed))
+    // 计算权限状态：只根据必要权限判断
+    val allRequiredGranted = permissionState.allRequiredPermissionsGranted
 
     LazyColumn(
         modifier = Modifier
@@ -55,14 +56,14 @@ fun SettingsScreen(
         // 权限状态横幅
         item {
             PermissionStatusBanner(
-                allGranted = allGranted,
+                allGranted = allRequiredGranted,
                 onClick = { /* 滚动到权限部分 */ }
             )
         }
 
-        // 系统权限
+        // ========== 必要权限区块 ==========
         item {
-            SectionTitle(title = stringResource(R.string.system_permissions), paddingTop = 8.dp)
+            SectionTitle(title = stringResource(R.string.required_permissions), paddingTop = 8.dp)
         }
 
         item {
@@ -87,6 +88,48 @@ fun SettingsScreen(
 
         item {
             PermissionItem(
+                title = stringResource(R.string.usage_stats),
+                subtitle = stringResource(R.string.usage_subtitle),
+                icon = Icons.Outlined.Timer,
+                isEnabled = permissionState.usageStatsEnabled,
+                onClick = { viewModel.openUsageStatsSettings() }
+            )
+        }
+
+        // MIUI 后台弹窗权限（必要权限）
+        if (permissionState.isMiui) {
+            item {
+                MiuiBackgroundPopupItem(
+                    title = stringResource(R.string.background_popup),
+                    subtitle = stringResource(R.string.background_popup_subtitle),
+                    isGranted = permissionState.miuiBackgroundPopupGranted,
+                    onOpenSettings = { viewModel.openMiuiBackgroundPopupSettings() },
+                    onRefresh = { viewModel.refreshPermissions() }
+                )
+            }
+
+            if (!permissionState.miuiBackgroundPopupGranted) {
+                item {
+                    MiuiWarningBanner()
+                }
+            }
+        }
+
+        item {
+            ListDivider(startIndent = 0.dp)
+        }
+
+        // ========== 建议权限区块 ==========
+        item {
+            SectionTitle(
+                title = stringResource(R.string.recommended_permissions),
+                subtitle = stringResource(R.string.recommended_permissions_subtitle),
+                paddingTop = 8.dp
+            )
+        }
+
+        item {
+            PermissionItem(
                 title = stringResource(R.string.battery_optimization),
                 subtitle = stringResource(R.string.battery_subtitle),
                 icon = Icons.Outlined.BatteryAlert,
@@ -95,30 +138,8 @@ fun SettingsScreen(
             )
         }
 
-        item {
-            PermissionItem(
-                title = stringResource(R.string.usage_stats),
-                subtitle = stringResource(R.string.usage_subtitle),
-                icon = Icons.Outlined.Timer,
-                isEnabled = permissionState.usageStatsEnabled,
-                onClick = { viewModel.openUsageStatsSettings() }
-            )
-            ListDivider(startIndent = 0.dp)
-        }
-
-        // MIUI 专属设置
+        // MIUI 建议权限
         if (permissionState.isMiui) {
-            val miuiNeedsSetup = !permissionState.miuiAutoStartConfirmed ||
-                    !permissionState.miuiBatterySaverConfirmed ||
-                    !permissionState.miuiLockAppConfirmed
-
-            item {
-                SectionTitle(
-                    title = if (miuiNeedsSetup) stringResource(R.string.miui_settings_needed) else stringResource(R.string.miui_settings),
-                    paddingTop = 8.dp
-                )
-            }
-
             item {
                 MiuiPermissionItem(
                     title = stringResource(R.string.auto_start),
@@ -127,16 +148,6 @@ fun SettingsScreen(
                     onOpenSettings = { viewModel.openMiuiAutoStartSettings() },
                     onConfirm = { viewModel.confirmMiuiAutoStart() },
                     onReset = { viewModel.resetMiuiAutoStart() }
-                )
-            }
-
-            item {
-                MiuiBackgroundPopupItem(
-                    title = stringResource(R.string.background_popup),
-                    subtitle = stringResource(R.string.background_popup_subtitle),
-                    isGranted = permissionState.miuiBackgroundPopupGranted,
-                    onOpenSettings = { viewModel.openMiuiBackgroundPopupSettings() },
-                    onRefresh = { viewModel.refreshPermissions() }
                 )
             }
 
@@ -159,14 +170,11 @@ fun SettingsScreen(
                     onConfirm = { viewModel.confirmMiuiLockApp() },
                     onReset = { viewModel.resetMiuiLockApp() }
                 )
-                ListDivider(startIndent = 0.dp)
             }
+        }
 
-            if (!permissionState.miuiBackgroundPopupGranted) {
-                item {
-                    MiuiWarningBanner()
-                }
-            }
+        item {
+            ListDivider(startIndent = 0.dp)
         }
 
         // 干预设置
@@ -604,24 +612,29 @@ private fun LanguageSettingItem(
     val context = LocalContext.current
     val activity = context as? Activity
 
-    // 使用 remember 记录初始语言，避免首次加载时 recreate
-    var initialLanguage by remember { mutableStateOf<String?>(null) }
+    // 使用 userTriggeredChange 标志来区分用户主动切换和 DataStore 初始加载
+    // 只有用户主动点击切换时才 recreate，避免初始加载时的竞态条件
+    var userTriggeredChange by remember { mutableStateOf(false) }
+    var lastKnownLanguage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(currentLanguage) {
-        if (initialLanguage == null) {
-            initialLanguage = currentLanguage
-        } else if (initialLanguage != currentLanguage) {
-            // 语言已变化，延迟后 recreate
-            delay(100)
+        if (lastKnownLanguage != null && lastKnownLanguage != currentLanguage && userTriggeredChange) {
+            // 用户主动切换语言，延迟后 recreate
+            delay(150)  // 稍微增加延迟确保 DataStore 写入完成
+            userTriggeredChange = false  // 重置标志
             activity?.recreate()
         }
+        lastKnownLanguage = currentLanguage
     }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
-            .clickable(onClick = onToggle)  // 只触发 toggle，不 recreate
+            .clickable(onClick = {
+                userTriggeredChange = true  // 标记为用户主动切换
+                onToggle()
+            })
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -646,7 +659,10 @@ private fun LanguageSettingItem(
 
         Switch(
             checked = currentLanguage == "zh",
-            onCheckedChange = { onToggle() }  // 只触发 toggle，不 recreate
+            onCheckedChange = {
+                userTriggeredChange = true  // 标记为用户主动切换
+                onToggle()
+            }
         )
     }
 }

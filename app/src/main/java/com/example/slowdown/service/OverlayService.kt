@@ -157,7 +157,7 @@ class OverlayService : Service() {
 
         // Continue button - initially disabled
         btnContinue?.isEnabled = false
-        btnContinue?.text = "等待中..."
+        btnContinue?.text = getString(R.string.overlay_waiting)
         btnContinue?.setOnClickListener {
             Log.d(TAG, "[OverlayService] Continue clicked")
             recordAndFinish(packageName, "continued")
@@ -179,11 +179,11 @@ class OverlayService : Service() {
             }
 
             override fun onFinish() {
-                tvCountdown?.text = "可以继续了"
+                tvCountdown?.text = getString(R.string.overlay_can_continue)
                 tvCountdown?.textSize = 24f
                 tvHint?.visibility = View.GONE
                 btnContinue?.isEnabled = true
-                btnContinue?.text = "继续访问"
+                btnContinue?.text = getString(R.string.overlay_continue_access)
             }
         }.start()
 

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">慢一点</string>
+    <string name="app_name">SlowDown</string>
     <string name="accessibility_service_description">监控应用启动以提供数字正念干预</string>
 
     <!-- Dashboard -->
@@ -33,6 +33,9 @@
     <!-- Settings -->
     <string name="settings">设置</string>
     <string name="system_permissions">系统权限</string>
+    <string name="required_permissions">必要权限</string>
+    <string name="recommended_permissions">建议权限</string>
+    <string name="recommended_permissions_subtitle">提升稳定性（可选）</string>
     <string name="accessibility_service">无障碍服务</string>
     <string name="accessibility_subtitle">用于检测应用启动</string>
     <string name="overlay_permission">悬浮窗权限</string>
@@ -98,6 +101,9 @@
     <string name="this_month">本月</string>
     <string name="month_total_usage">本月总计使用时间</string>
 
+    <!-- Dashboard Awareness -->
+    <string name="today_awareness_moments">今日觉知时刻</string>
+
     <!-- App List Screen -->
     <string name="protected_apps_count">已监控 (%d)</string>
     <string name="available_apps_count">可添加 (%d)</string>
@@ -162,31 +168,77 @@
     <string name="duration_minutes_only">%d分钟</string>
 
     <!-- Onboarding -->
-    <string name="onboarding_welcome_title">夺回你的时间</string>
-    <string name="onboarding_welcome_subtitle">慢一点通过正念干预帮你建立更健康的数字习惯</string>
-    <string name="onboarding_value_1">在打开分心应用前暂停一下</string>
-    <string name="onboarding_value_2">了解自己的使用习惯</string>
-    <string name="onboarding_value_3">追踪进步，庆祝每一次小胜利</string>
-    <string name="onboarding_get_started">开始使用</string>
+    <string name="onboarding_welcome_title">让时间回归你手中</string>
+    <string name="onboarding_welcome_subtitle">一次深呼吸的间隙，足以改变一个习惯</string>
+    <string name="onboarding_value_1">在打开应用前，给自己 10 秒</string>
+    <string name="onboarding_value_2">觉察使用模式，无需刻意改变</string>
+    <string name="onboarding_value_3">每一次暂停，都是一次小胜利</string>
+    <string name="onboarding_get_started">开始设置</string>
 
     <string name="onboarding_permissions_title">开启权限</string>
-    <string name="onboarding_permissions_subtitle">慢一点需要一些权限才能正常工作。我们只用它来帮助你保持专注。</string>
-    <string name="onboarding_permissions_warning">部分核心权限未授予，应用可能无法正常工作。</string>
-    <string name="onboarding_refresh_permissions">刷新权限状态</string>
+    <string name="onboarding_permissions_subtitle">SlowDown 需要这些权限才能在你打开应用时提供帮助。</string>
+    <string name="onboarding_permissions_warning">缺少核心权限，应用无法正常工作</string>
+    <string name="onboarding_refresh_permissions">刷新状态</string>
     <string name="onboarding_continue">继续</string>
     <string name="onboarding_grant_all">授予全部权限</string>
 
     <string name="onboarding_apps_title">选择要监控的应用</string>
-    <string name="onboarding_apps_subtitle">选择最容易让你分心的应用。你随时可以在设置中修改。</string>
-    <string name="onboarding_apps_selected">已选择 %d 个应用</string>
+    <string name="onboarding_apps_subtitle">哪些应用最容易让你失去时间感？</string>
+    <string name="onboarding_apps_selected">已选择 %d 个</string>
     <string name="onboarding_suggested_apps">推荐监控</string>
     <string name="onboarding_other_apps">其他应用</string>
-    <string name="onboarding_skip_for_now">暂时跳过</string>
+    <string name="onboarding_skip_for_now">跳过，稍后设置</string>
 
-    <string name="onboarding_complete_title">设置完成！</string>
-    <string name="onboarding_complete_subtitle">慢一点现在开始保护你。深呼吸，开始你的数字健康之旅吧。</string>
+    <string name="onboarding_complete_title">准备就绪</string>
+    <string name="onboarding_complete_subtitle">下次打开这些应用时，你会有 10 秒的思考时间</string>
     <string name="onboarding_apps_monitored">监控应用</string>
     <string name="onboarding_default_mode">默认模式</string>
     <string name="onboarding_gentle_mode_short">温和</string>
-    <string name="onboarding_start_journey">开始旅程</string>
+    <string name="onboarding_start_journey">开始</string>
+
+    <!-- Overlay Activity (Deep Breathing) -->
+    <string name="overlay_take_a_break">休息一下</string>
+    <string name="overlay_limit_reached">%s 已达到今日限额</string>
+    <string name="overlay_used_today">今日已使用 %d 分钟</string>
+    <string name="overlay_deep_breath">深呼吸</string>
+    <string name="overlay_about_to_open">你正要打开 %s</string>
+    <string name="overlay_can_continue">可以继续了</string>
+    <string name="overlay_follow_circle">跟随圆圈呼吸...</string>
+    <string name="overlay_open_redirect">打开 %s</string>
+    <string name="overlay_continue_using">继续使用 %s</string>
+    <string name="overlay_please_wait">请稍等 %ds</string>
+    <string name="overlay_give_up_go_home">放弃，返回桌面</string>
+    <string name="overlay_redirect_app_default">替代应用</string>
+    <string name="overlay_waiting">等待中...</string>
+    <string name="overlay_continue_access">继续访问</string>
+
+    <!-- Usage Warning Activity -->
+    <string name="warning_gentle_reminder">轻声提醒</string>
+    <string name="warning_remaining_minutes">%1$s 还剩 %2$d 分钟</string>
+    <string name="warning_used_minutes">今日已使用 %d 分钟</string>
+    <string name="warning_good_time_pause">这是一个暂停的好时机</string>
+    <string name="warning_take_a_rest">休息一下</string>
+    <string name="warning_continue_aware">我知道了，继续使用</string>
+    <string name="warning_soft_reminder">温和提醒</string>
+    <string name="warning_limit_reached">%s 今日限额已达</string>
+    <string name="warning_do_something_else">做点别的事情吧\n让眼睛和心灵都休息一下</string>
+    <string name="warning_go_do_other">去做别的事情</string>
+    <string name="warning_go_home">返回桌面</string>
+    <string name="warning_use_more">再用一会儿</string>
+    <string name="warning_focus_guard">专注守护</string>
+    <string name="warning_today_stop">今日止步</string>
+    <string name="warning_app_restricted">%s 已被限制使用</string>
+    <string name="warning_quota_used_up">%s 今日额度用尽</string>
+    <string name="warning_app_not_available">这个应用今天不开放</string>
+    <string name="warning_give_space">给自己一点空间\n去探索更有意义的事情</string>
+    <string name="warning_tomorrow_new_day">明天又是新的一天\n让今天的自己好好休息</string>
+
+    <!-- Awareness Moments -->
+    <string name="time_morning">上午</string>
+    <string name="time_afternoon">下午</string>
+    <string name="time_evening">晚上</string>
+    <string name="awareness_chose_leave">在 %s 前，你选择了离开</string>
+    <string name="awareness_continued_after_breath">深呼吸后，你继续使用了 %s</string>
+    <string name="awareness_chose_redirect">你选择了其他替代 %s</string>
+    <string name="awareness_paused_before">你在 %s 前暂停了一下</string>
 </resources>

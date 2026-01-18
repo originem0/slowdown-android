@@ -663,13 +663,13 @@ private fun DailyLimitSection(
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "完全禁止",
+                    text = stringResource(R.string.completely_blocked_simple),
                     style = MaterialTheme.typography.bodyLarge,
                     color = if (isCompletelyBlocked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                     fontWeight = if (isCompletelyBlocked) FontWeight.Medium else FontWeight.Normal
                 )
                 Text(
-                    text = "打开应用即被阻止",
+                    text = stringResource(R.string.blocked_on_open),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -728,13 +728,13 @@ private fun DailyLimitSection(
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "自定义",
+                text = stringResource(R.string.custom),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
             if (isCustomValue && currentLimit != null) {
                 Text(
-                    text = "$currentLimit 分钟",
+                    text = stringResource(R.string.minutes_format, currentLimit),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium
@@ -773,7 +773,7 @@ private fun CustomLimitDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("设置每日限额") },
+        title = { Text(stringResource(R.string.set_daily_limit)) },
         text = {
             Column {
                 OutlinedTextField(
@@ -783,8 +783,8 @@ private fun CustomLimitDialog(
                             inputValue = newValue
                         }
                     },
-                    label = { Text("分钟数") },
-                    suffix = { Text("分钟") },
+                    label = { Text(stringResource(R.string.enter_minutes)) },
+                    suffix = { Text(stringResource(R.string.minute_unit)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     isError = inputValue.isNotEmpty() && !isValid,
@@ -793,7 +793,7 @@ private fun CustomLimitDialog(
                 if (inputValue.isNotEmpty() && !isValid) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "请输入 1-1440 之间的数字",
+                        text = stringResource(R.string.input_range_error),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -805,12 +805,12 @@ private fun CustomLimitDialog(
                 onClick = { inputValue.toIntOrNull()?.let { onConfirm(it) } },
                 enabled = isValid
             ) {
-                Text("确定")
+                Text(stringResource(R.string.confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -841,7 +841,7 @@ private fun LimitModeSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "已选择完全禁止模式",
+                    text = stringResource(R.string.already_blocked_mode),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -869,11 +869,11 @@ private fun LimitModeSection(
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "软提醒",
+                    text = stringResource(R.string.soft_reminder),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = "超时后提醒，但允许继续使用",
+                    text = stringResource(R.string.soft_reminder_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -901,11 +901,11 @@ private fun LimitModeSection(
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "强制关闭",
+                    text = stringResource(R.string.force_close),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = "超时后今日无法再使用该应用",
+                    text = stringResource(R.string.force_close_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

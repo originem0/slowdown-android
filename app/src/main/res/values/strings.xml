@@ -33,6 +33,9 @@
     <!-- Settings -->
     <string name="settings">Settings</string>
     <string name="system_permissions">System Permissions</string>
+    <string name="required_permissions">Required Permissions</string>
+    <string name="recommended_permissions">Recommended Permissions</string>
+    <string name="recommended_permissions_subtitle">Improve stability (optional)</string>
     <string name="accessibility_service">Accessibility Service</string>
     <string name="accessibility_subtitle">Monitors app launches</string>
     <string name="overlay_permission">Overlay Permission</string>
@@ -98,6 +101,9 @@
     <string name="this_month">This Month</string>
     <string name="month_total_usage">Monthly Total Usage</string>
 
+    <!-- Dashboard Awareness -->
+    <string name="today_awareness_moments">Today\'s Awareness Moments</string>
+
     <!-- App List Screen -->
     <string name="protected_apps_count">Protected Apps (%d)</string>
     <string name="available_apps_count">Available Apps (%d)</string>
@@ -162,31 +168,77 @@
     <string name="duration_minutes_only">%dm</string>
 
     <!-- Onboarding -->
-    <string name="onboarding_welcome_title">Take Back Your Time</string>
-    <string name="onboarding_welcome_subtitle">SlowDown helps you build healthier digital habits through mindful interventions</string>
-    <string name="onboarding_value_1">Pause before opening distracting apps</string>
-    <string name="onboarding_value_2">Build awareness of your usage patterns</string>
-    <string name="onboarding_value_3">Track progress and celebrate wins</string>
+    <string name="onboarding_welcome_title">Reclaim Your Time</string>
+    <string name="onboarding_welcome_subtitle">A single breath can change a habit</string>
+    <string name="onboarding_value_1">Give yourself 10 seconds before opening apps</string>
+    <string name="onboarding_value_2">Observe your patterns, no pressure to change</string>
+    <string name="onboarding_value_3">Every pause is a small victory</string>
     <string name="onboarding_get_started">Get Started</string>
 
     <string name="onboarding_permissions_title">Enable Permissions</string>
-    <string name="onboarding_permissions_subtitle">SlowDown needs a few permissions to work properly. We only use them to help you stay focused.</string>
-    <string name="onboarding_permissions_warning">Some core permissions are not granted. The app may not work as expected.</string>
-    <string name="onboarding_refresh_permissions">Refresh permission status</string>
+    <string name="onboarding_permissions_subtitle">SlowDown needs these permissions to help you when opening apps.</string>
+    <string name="onboarding_permissions_warning">Missing core permissions. App cannot work properly.</string>
+    <string name="onboarding_refresh_permissions">Refresh status</string>
     <string name="onboarding_continue">Continue</string>
     <string name="onboarding_grant_all">Grant All Permissions</string>
 
     <string name="onboarding_apps_title">Choose Apps to Monitor</string>
-    <string name="onboarding_apps_subtitle">Select the apps that distract you the most. You can always change this later.</string>
-    <string name="onboarding_apps_selected">%d apps selected</string>
+    <string name="onboarding_apps_subtitle">Which apps make you lose track of time?</string>
+    <string name="onboarding_apps_selected">%d selected</string>
     <string name="onboarding_suggested_apps">Suggested Apps</string>
     <string name="onboarding_other_apps">Other Apps</string>
-    <string name="onboarding_skip_for_now">Skip for now</string>
+    <string name="onboarding_skip_for_now">Skip, set up later</string>
 
-    <string name="onboarding_complete_title">You\'re All Set!</string>
-    <string name="onboarding_complete_subtitle">SlowDown is now protecting you. Take a deep breath and enjoy your digital wellness journey.</string>
+    <string name="onboarding_complete_title">Ready to Go</string>
+    <string name="onboarding_complete_subtitle">Next time you open these apps, you\'ll have 10 seconds to think</string>
     <string name="onboarding_apps_monitored">Apps Monitored</string>
     <string name="onboarding_default_mode">Default Mode</string>
     <string name="onboarding_gentle_mode_short">Gentle</string>
-    <string name="onboarding_start_journey">Start Your Journey</string>
+    <string name="onboarding_start_journey">Start</string>
+
+    <!-- Overlay Activity (Deep Breathing) -->
+    <string name="overlay_take_a_break">Take a break</string>
+    <string name="overlay_limit_reached">%s has reached today\'s limit</string>
+    <string name="overlay_used_today">Used %d minutes today</string>
+    <string name="overlay_deep_breath">Deep breath</string>
+    <string name="overlay_about_to_open">You\'re about to open %s</string>
+    <string name="overlay_can_continue">Ready to continue</string>
+    <string name="overlay_follow_circle">Follow the circle and breathe...</string>
+    <string name="overlay_open_redirect">Open %s</string>
+    <string name="overlay_continue_using">Continue using %s</string>
+    <string name="overlay_please_wait">Please wait %ds</string>
+    <string name="overlay_give_up_go_home">Give up, go home</string>
+    <string name="overlay_redirect_app_default">Alternative App</string>
+    <string name="overlay_waiting">Waiting...</string>
+    <string name="overlay_continue_access">Continue</string>
+
+    <!-- Usage Warning Activity -->
+    <string name="warning_gentle_reminder">Gentle Reminder</string>
+    <string name="warning_remaining_minutes">%1$s has %2$d minutes left</string>
+    <string name="warning_used_minutes">Used %d minutes today</string>
+    <string name="warning_good_time_pause">This is a good time to pause</string>
+    <string name="warning_take_a_rest">Take a rest</string>
+    <string name="warning_continue_aware">I understand, continue</string>
+    <string name="warning_soft_reminder">Soft Reminder</string>
+    <string name="warning_limit_reached">%s has reached today\'s limit</string>
+    <string name="warning_do_something_else">Do something else\nLet your eyes and mind rest</string>
+    <string name="warning_go_do_other">Go do something else</string>
+    <string name="warning_go_home">Go Home</string>
+    <string name="warning_use_more">Use a bit more</string>
+    <string name="warning_focus_guard">Focus Guard</string>
+    <string name="warning_today_stop">That\'s all for today</string>
+    <string name="warning_app_restricted">%s is restricted</string>
+    <string name="warning_quota_used_up">%s quota used up today</string>
+    <string name="warning_app_not_available">This app is not available today</string>
+    <string name="warning_give_space">Give yourself some space\nExplore something meaningful</string>
+    <string name="warning_tomorrow_new_day">Tomorrow is a new day\nLet today\'s self rest well</string>
+
+    <!-- Awareness Moments -->
+    <string name="time_morning">Morning</string>
+    <string name="time_afternoon">Afternoon</string>
+    <string name="time_evening">Evening</string>
+    <string name="awareness_chose_leave">Before %s, you chose to leave</string>
+    <string name="awareness_continued_after_breath">After deep breathing, you continued using %s</string>
+    <string name="awareness_chose_redirect">You chose an alternative to %s</string>
+    <string name="awareness_paused_before">You paused before %s</string>
 </resources>

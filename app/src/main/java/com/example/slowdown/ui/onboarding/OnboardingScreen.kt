@@ -538,16 +538,16 @@ private fun PermissionCard(
 
             Spacer(modifier = Modifier.width(DS.Spacing.md))
 
-            // Text
+            // Text - 使用资源 ID
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = item.title,
+                    text = stringResource(item.titleResId),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = item.description,
+                    text = stringResource(item.descriptionResId),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

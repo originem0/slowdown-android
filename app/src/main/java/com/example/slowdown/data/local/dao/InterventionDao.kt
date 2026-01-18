@@ -67,4 +67,7 @@ interface InterventionDao {
 
     @Query("SELECT * FROM intervention_records ORDER BY timestamp DESC LIMIT :limit")
     fun getRecent(limit: Int): Flow<List<InterventionRecord>>
+
+    @Query("SELECT * FROM intervention_records WHERE timestamp >= :startTime ORDER BY timestamp DESC")
+    fun getTodayRecords(startTime: Long): Flow<List<InterventionRecord>>
 }

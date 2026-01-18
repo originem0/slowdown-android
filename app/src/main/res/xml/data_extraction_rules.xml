@@ -1,19 +1,28 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Android 12+ 数据提取规则
+   支持云备份和设备间传输
 -->
 <data-extraction-rules>
+    <!-- 云备份规则（Google Drive） -->
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <!-- 备份 Room 数据库 -->
+        <include domain="database" path="slowdown_database" />
+        <include domain="database" path="slowdown_database-shm" />
+        <include domain="database" path="slowdown_database-wal" />
+
+        <!-- 备份 DataStore 设置 -->
+        <include domain="file" path="datastore/settings.preferences_pb" />
     </cloud-backup>
-    <!--
+
+    <!-- 设备间传输规则（换机助手等） -->
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <!-- 传输 Room 数据库 -->
+        <include domain="database" path="slowdown_database" />
+        <include domain="database" path="slowdown_database-shm" />
+        <include domain="database" path="slowdown_database-wal" />
+
+        <!-- 传输 DataStore 设置 -->
+        <include domain="file" path="datastore/settings.preferences_pb" />
     </device-transfer>
-    -->
 </data-extraction-rules>

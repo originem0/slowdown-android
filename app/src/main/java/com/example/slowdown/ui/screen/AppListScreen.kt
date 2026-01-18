@@ -92,7 +92,7 @@ fun AppListScreen(
                     SearchSection(
                         query = searchQuery,
                         onQueryChange = { searchQuery = it },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp) // Reduced vertical padding
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
                     )
                 }
 
@@ -261,6 +261,10 @@ private fun MonitoredAppItem(
             // Mode Badge with tap hint
             val modeText = when {
                 monitoredApp?.isEnabled != true -> stringResource(R.string.tracking_only)
+                // 完全禁止：strict 模式 + 无时间限制
+                monitoredApp.limitMode == "strict" && monitoredApp.dailyLimitMinutes == null ->
+                    stringResource(R.string.completely_blocked_simple)
+                // 严格限制：strict 模式 + 有时间限制
                 monitoredApp.limitMode == "strict" -> stringResource(R.string.strict_mode)
                 else -> stringResource(R.string.gentle_mode)
             }

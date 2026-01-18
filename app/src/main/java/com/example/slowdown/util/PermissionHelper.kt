@@ -148,6 +148,14 @@ object PermissionHelper {
     }
 
     /**
+     * 打开 MIUI 应用设置页面（用于引导页）
+     * 与 openMiuiBackgroundPopupSettings 相同，但命名更通用
+     */
+    fun openMiuiAppSettings(context: Context) {
+        openMiuiBackgroundPopupSettings(context)
+    }
+
+    /**
      * 检查是否已授予 UsageStats 权限（使用统计权限）
      * 用于获取应用使用时长
      */

@@ -21,7 +21,8 @@ class SlowDownApp : Application() {
             interventionDao = database.interventionDao(),
             monitoredAppDao = database.monitoredAppDao(),
             usageRecordDao = database.usageRecordDao(),
-            userPreferences = userPreferences
+            userPreferences = userPreferences,
+            context = this
         )
     }
 

@@ -39,7 +39,12 @@ class SettingsViewModel(
     private val _permissionState = MutableStateFlow(PermissionState())
     val permissionState: StateFlow<PermissionState> = _permissionState.asStateFlow()
 
+    // 记录上一次使用统计权限状态，用于检测变化
+    private var previousUsageStatsEnabled: Boolean = false
+
     init {
+        // 初始化时获取当前使用统计权限状态
+        previousUsageStatsEnabled = PermissionHelper.hasUsageStatsPermission(context)
         refreshPermissions()
         // 监听 MIUI 确认状态变化
         viewModelScope.launch {
@@ -63,11 +68,13 @@ class SettingsViewModel(
 
     fun refreshPermissions() {
         val isMiui = PermissionHelper.isMiui()
+        val currentUsageStatsEnabled = PermissionHelper.hasUsageStatsPermission(context)
+
         _permissionState.value = PermissionState(
             accessibilityEnabled = PermissionHelper.isAccessibilityEnabled(context),
             overlayEnabled = PermissionHelper.canDrawOverlays(context),
             batteryOptimizationDisabled = PermissionHelper.isIgnoringBatteryOptimizations(context),
-            usageStatsEnabled = PermissionHelper.hasUsageStatsPermission(context),
+            usageStatsEnabled = currentUsageStatsEnabled,
             isMiui = isMiui,
             // 使用 MiuiHelper 检测实际权限状态
             miuiBackgroundPopupGranted = if (isMiui) MiuiHelper.canBackgroundStart(context) else true,
@@ -76,6 +83,14 @@ class SettingsViewModel(
             miuiBatterySaverConfirmed = miuiBatterySaverConfirmed.value,
             miuiLockAppConfirmed = miuiLockAppConfirmed.value
         )
+
+        // 检测使用统计权限从关闭变为开启，触发使用时长同步
+        if (currentUsageStatsEnabled && !previousUsageStatsEnabled) {
+            viewModelScope.launch {
+                repository.syncAllMonitoredAppsUsage()
+            }
+        }
+        previousUsageStatsEnabled = currentUsageStatsEnabled
     }
 
     fun setDefaultCountdown(seconds: Int) {

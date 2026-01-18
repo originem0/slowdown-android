@@ -101,6 +101,8 @@ class AppListViewModel(
                             countdownSeconds = countdown
                         )
                     )
+                    // 添加后立即同步该应用的使用时间
+                    repository.syncAppUsage(appInfo.packageName)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to toggle app ${appInfo.packageName}: ${e.message}", e)

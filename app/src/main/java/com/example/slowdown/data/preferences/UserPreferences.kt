@@ -28,7 +28,7 @@ class UserPreferences(private val context: Context) {
     }
 
     val serviceEnabled: Flow<Boolean> = context.dataStore.data
-        .map { preferences -> preferences[SERVICE_ENABLED] ?: true }
+        .map { preferences -> preferences[SERVICE_ENABLED] ?: false }
 
     val defaultCountdown: Flow<Int> = context.dataStore.data
         .map { preferences -> preferences[DEFAULT_COUNTDOWN] ?: 10 }

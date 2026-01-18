@@ -1,5 +1,6 @@
 package com.example.slowdown.ui.overlay
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.WindowManager
@@ -26,14 +27,20 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.slowdown.R
 import com.example.slowdown.SlowDownApp
 import com.example.slowdown.service.OverlayService
 import com.example.slowdown.ui.theme.*
+import com.example.slowdown.util.LocaleHelper
 import com.example.slowdown.util.NotificationHelper
 import com.example.slowdown.util.PackageUtils
 import com.example.slowdown.viewmodel.OverlayViewModel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -54,6 +61,28 @@ class OverlayActivity : ComponentActivity() {
 
     private val viewModel: OverlayViewModel by viewModels {
         OverlayViewModel.Factory((application as SlowDownApp).repository)
+    }
+
+    override fun attachBaseContext(newBase: Context?) {
+        if (newBase == null) {
+            super.attachBaseContext(newBase)
+            return
+        }
+
+        // Get the saved language preference synchronously
+        val app = newBase.applicationContext as? SlowDownApp
+        val language = if (app != null) {
+            runBlocking {
+                withTimeoutOrNull(1000L) {  // 1 second timeout
+                    app.userPreferences.appLanguage.first()
+                } ?: "en"  // Default to English if timeout
+            }
+        } else {
+            "en"
+        }
+
+        val localizedContext = LocaleHelper.setLocale(newBase, language)
+        super.attachBaseContext(localizedContext)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,7 +112,7 @@ class OverlayActivity : ComponentActivity() {
         val appName = intent.getStringExtra(EXTRA_APP_NAME) ?: packageName
         val countdownSeconds = intent.getIntExtra(EXTRA_COUNTDOWN_SECONDS, 10)
         val redirectPackage = intent.getStringExtra(EXTRA_REDIRECT_PACKAGE)
-        val redirectAppName = intent.getStringExtra(EXTRA_REDIRECT_APP_NAME) ?: "替代应用"
+        val redirectAppName = intent.getStringExtra(EXTRA_REDIRECT_APP_NAME) ?: getString(R.string.overlay_redirect_app_default)
         val isLimitReached = intent.getBooleanExtra(EXTRA_IS_LIMIT_REACHED, false)
         val usedMinutes = intent.getIntExtra(EXTRA_USED_MINUTES, 0)
         val limitMinutes = intent.getIntExtra(EXTRA_LIMIT_MINUTES, 0)
@@ -199,7 +228,7 @@ private fun MindfulOverlayScreen(
             // 顶部提示语 - 根据是否达到限额显示不同文案
             if (isLimitReached) {
                 Text(
-                    text = "休息一下",
+                    text = stringResource(R.string.overlay_take_a_break),
                     color = Color(0xFFFFB74D).copy(alpha = 0.7f),  // 橙色
                     style = MaterialTheme.typography.titleMedium,
                     letterSpacing = 4.sp
@@ -208,7 +237,7 @@ private fun MindfulOverlayScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "$appName 已达到今日限额",
+                    text = stringResource(R.string.overlay_limit_reached, appName),
                     color = Color.White.copy(alpha = 0.9f),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Medium,
@@ -219,13 +248,13 @@ private fun MindfulOverlayScreen(
 
                 // 显示使用时间
                 Text(
-                    text = "今日已使用 $usedMinutes 分钟",
+                    text = stringResource(R.string.overlay_used_today, usedMinutes),
                     color = Color.White.copy(alpha = 0.6f),
                     style = MaterialTheme.typography.bodyMedium
                 )
             } else {
                 Text(
-                    text = "深呼吸",
+                    text = stringResource(R.string.overlay_deep_breath),
                     color = Color.White.copy(alpha = 0.5f),
                     style = MaterialTheme.typography.titleMedium,
                     letterSpacing = 4.sp
@@ -234,7 +263,7 @@ private fun MindfulOverlayScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "你正要打开 $appName",
+                    text = stringResource(R.string.overlay_about_to_open, appName),
                     color = Color.White.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Medium,
@@ -257,7 +286,7 @@ private fun MindfulOverlayScreen(
 
             // 提示文字
             Text(
-                text = if (canContinue) "可以继续了" else "跟随圆圈呼吸...",
+                text = stringResource(if (canContinue) R.string.overlay_can_continue else R.string.overlay_follow_circle),
                 color = if (canContinue) Sage400 else Color.White.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -277,7 +306,7 @@ private fun MindfulOverlayScreen(
                     )
                 ) {
                     Text(
-                        text = "打开 $redirectAppName",
+                        text = stringResource(R.string.overlay_open_redirect, redirectAppName),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium
                     )
@@ -300,7 +329,10 @@ private fun MindfulOverlayScreen(
                 )
             ) {
                 Text(
-                    text = if (canContinue) "继续使用 $appName" else "请稍等 ${countdown}s",
+                    text = if (canContinue)
+                        stringResource(R.string.overlay_continue_using, appName)
+                    else
+                        stringResource(R.string.overlay_please_wait, countdown),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium,
                     color = if (canContinue) Color.White else Color.White.copy(alpha = 0.5f)
@@ -312,7 +344,7 @@ private fun MindfulOverlayScreen(
             // 返回按钮 - 更低调
             TextButton(onClick = onCancel) {
                 Text(
-                    text = "放弃，返回桌面",
+                    text = stringResource(R.string.overlay_give_up_go_home),
                     color = Color.White.copy(alpha = 0.5f),
                     style = MaterialTheme.typography.bodyMedium
                 )

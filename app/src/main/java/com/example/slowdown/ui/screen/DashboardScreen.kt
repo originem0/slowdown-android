@@ -1,5 +1,6 @@
 package com.example.slowdown.ui.screen
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -15,9 +16,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -27,14 +32,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.draw.shadow
-import androidx.compose.foundation.Canvas
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.slowdown.data.local.dao.AppStat
 import com.example.slowdown.data.local.dao.SuccessRateStat
 import com.example.slowdown.ui.components.*
+import com.example.slowdown.viewmodel.AwarenessMoment
 import com.example.slowdown.viewmodel.DashboardViewModel
+import com.example.slowdown.viewmodel.MindfulState
 import com.example.slowdown.viewmodel.PermissionState
 import androidx.compose.ui.res.stringResource
 import com.example.slowdown.R
@@ -50,13 +55,52 @@ fun DashboardScreen(
     val topApps by viewModel.topApps.collectAsState()
     val serviceEnabled by viewModel.serviceEnabled.collectAsState()
     val permissionState by viewModel.permissionState.collectAsState()
+    val mindfulState by viewModel.mindfulState.collectAsState()
+    val awarenessMoments by viewModel.awarenessMoments.collectAsState()
 
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    // 权限不足提示对话框状态
+    var showPermissionDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             viewModel.refreshPermissions()
         }
+    }
+
+    // 权限不足提示对话框
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            title = { Text(stringResource(R.string.permissions_needed)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.please_enable_permissions))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    permissionState.missingRequiredPermissions.forEach { permission ->
+                        Text(
+                            text = "• $permission",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPermissionDialog = false
+                    onNavigateToSettings()
+                }) {
+                    Text(stringResource(R.string.go_enable))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermissionDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -72,11 +116,18 @@ fun DashboardScreen(
             item {
                 StatusHeader(
                     serviceEnabled = serviceEnabled,
-                    onToggleService = { viewModel.setServiceEnabled(it) }
+                    onToggleService = { enabled ->
+                        if (enabled && !permissionState.allRequiredPermissionsGranted) {
+                            // 尝试开启但权限不足，显示提示
+                            showPermissionDialog = true
+                        } else {
+                            viewModel.setServiceEnabled(enabled)
+                        }
+                    }
                 )
             }
 
-            // Permissions
+            // Permissions - 仅在必要权限未授予时显示提示
             if (!permissionState.allRequiredPermissionsGranted) {
                 item {
                     AlertBanner(
@@ -87,21 +138,25 @@ fun DashboardScreen(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }
-            } else if (permissionState.miuiPermissionsNeeded) {
+            }
+
+            // Stats Cards with State-aware Breathing Circle
+            item {
+                StatsOverview(
+                    count = todayCount,
+                    successRate = successRate,
+                    mindfulState = mindfulState
+                )
+            }
+
+            // Today's Awareness Moments Card
+            if (awarenessMoments.isNotEmpty()) {
                 item {
-                    AlertBanner(
-                        message = stringResource(R.string.miui_permissions_needed),
-                        icon = Icons.Default.Warning,
-                        isWarning = false,
-                        onClick = onNavigateToSettings,
+                    AwarenessMomentsCard(
+                        moments = awarenessMoments,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }
-            }
-
-            // Stats Cards
-            item {
-                StatsOverview(count = todayCount, successRate = successRate)
             }
 
             // Top Intercepted Apps
@@ -129,7 +184,7 @@ fun DashboardScreen(
                                     showDivider = index < 4
                                 )
                             }
-                            
+
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -166,7 +221,7 @@ private fun StatusHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 32.dp), // Generous top spacing (Atmospheric)
+            .padding(horizontal = 24.dp, vertical = 16.dp), // Standardized top spacing
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -236,7 +291,7 @@ private fun StatusHeader(
 }
 
 @Composable
-private fun StatsOverview(count: Int, successRate: SuccessRateStat) {
+private fun StatsOverview(count: Int, successRate: SuccessRateStat, mindfulState: MindfulState) {
     // 计算成功率百分比
     val successPercent = if (successRate.total > 0) {
         (successRate.successful * 100 / successRate.total)
@@ -250,10 +305,10 @@ private fun StatsOverview(count: Int, successRate: SuccessRateStat) {
     ) {
         Spacer(modifier = Modifier.height(4.dp)) // Minimal top spacer
 
-        // Main Breathing Circle
-        BreathingCircle(count = count)
+        // Main Breathing Circle with State Awareness
+        MindfulBreathingCircle(mindfulState = mindfulState)
 
-        Spacer(modifier = Modifier.height(24.dp)) // Reduced spacer
+        Spacer(modifier = Modifier.height(16.dp)) // Reduced spacer
 
         // Stats Row
         Row(
@@ -283,7 +338,7 @@ private fun StatsOverview(count: Int, successRate: SuccessRateStat) {
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 
@@ -304,27 +359,77 @@ private fun StatItem(value: String, label: String, icon: Any?) {
     }
 }
 
+// State-specific colors
+private val CalmColor = Color(0xFF2A9D8F)       // Teal/Blue
+private val AlertColor = Color(0xFFF4A261)       // Warm Orange
+private val ExceededColor = Color(0xFF6B5B95)    // Dark Purple
+
+/**
+ * 正念呼吸圆圈 - 根据用户状态动态变化
+ * 平静：青蓝色，3秒呼吸，正圆
+ * 警觉：暖橙色，1秒快呼吸，微椭圆
+ * 超限：暗紫色，5秒慢呼吸，略收缩
+ */
 @Composable
-private fun BreathingCircle(count: Int) {
+private fun MindfulBreathingCircle(mindfulState: MindfulState) {
+    // State-based parameters
+    val targetColor = when (mindfulState) {
+        MindfulState.CALM -> CalmColor
+        MindfulState.ALERT -> AlertColor
+        MindfulState.EXCEEDED -> ExceededColor
+    }
+
+    val breathDuration = when (mindfulState) {
+        MindfulState.CALM -> 3000      // 3 seconds
+        MindfulState.ALERT -> 1000     // 1 second
+        MindfulState.EXCEEDED -> 5000  // 5 seconds
+    }
+
+    // Animated color transition
+    val animatedColor by animateColorAsState(
+        targetValue = targetColor,
+        animationSpec = tween(durationMillis = 1000),
+        label = "circleColor"
+    )
+
     val infiniteTransition = rememberInfiniteTransition(label = "breathing")
-    
-    // Slow, meditative organic rhythm (8 seconds cycle)
+
+    // Main scale animation (breathing)
     val scale by infiniteTransition.animateFloat(
         initialValue = 1.0f,
-        targetValue = 1.05f, // Extremely subtle breath
+        targetValue = when (mindfulState) {
+            MindfulState.CALM -> 1.08f      // Normal breath
+            MindfulState.ALERT -> 1.12f     // Slightly larger breath
+            MindfulState.EXCEEDED -> 0.92f  // Contracted, restrained
+        },
         animationSpec = infiniteRepeatable(
-            animation = tween(8000, easing = FastOutSlowInEasing),
+            animation = tween(breathDuration, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "mainScale"
     )
-    
-    // Subtle alpha pulsing for texture
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.5f,
-        targetValue = 0.7f,
+
+    // Horizontal stretch for ellipse effect (Alert state)
+    val horizontalStretch by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = when (mindfulState) {
+            MindfulState.CALM -> 1.0f       // Perfect circle
+            MindfulState.ALERT -> 1.08f     // Slight ellipse
+            MindfulState.EXCEEDED -> 1.0f   // Back to circle
+        },
         animationSpec = infiniteRepeatable(
-            animation = tween(8000, easing = FastOutSlowInEasing),
+            animation = tween(breathDuration, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "hStretch"
+    )
+
+    // Glow alpha pulsing
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(breathDuration, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "glowAlpha"
@@ -332,48 +437,65 @@ private fun BreathingCircle(count: Int) {
 
     // Inner glow pulse
     val innerGlow by infiniteTransition.animateFloat(
-        initialValue = 0.2f,
+        initialValue = 0.15f,
         targetValue = 0.4f,
         animationSpec = infiniteRepeatable(
-            animation = tween(6000, easing = LinearEasing),
+            animation = tween((breathDuration * 0.75f).toInt(), easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "innerGlow"
     )
 
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val containerColor = MaterialTheme.colorScheme.primaryContainer
     val surfaceColor = MaterialTheme.colorScheme.surface
-    
-    // Increased size for prominent abstracted visualization
+
+    // Larger size, no boundary feel
     Box(
-        modifier = Modifier.size(320.dp),
+        modifier = Modifier.size(300.dp),
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .scale(scaleX = horizontalStretch, scaleY = 1f)
+        ) {
             val center = this.center
-            val baseRadius = size.minDimension / 4
-            
-            // 1. Organic Outer Haze (Soft, expanding)
+            val baseRadius = size.minDimension / 2.8f
+
+            // 1. Outermost diffuse haze - creates boundaryless effect
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        primaryColor.copy(alpha = 0.15f * glowAlpha),
-                        primaryColor.copy(alpha = 0.05f),
+                        animatedColor.copy(alpha = 0.08f * glowAlpha),
+                        animatedColor.copy(alpha = 0.03f),
                         Color.Transparent
                     ),
                     center = center,
-                    radius = baseRadius * scale * 1.8f
+                    radius = baseRadius * scale * 2.2f
                 ),
-                radius = baseRadius * scale * 1.8f,
+                radius = baseRadius * scale * 2.2f,
                 center = center
             )
-            
-            // 2. Secondary Texture Ring (Subtle ring)
+
+            // 2. Secondary outer haze
             drawCircle(
-                 brush = Brush.radialGradient(
-                    0.7f to Color.Transparent,
-                    0.85f to primaryColor.copy(alpha = 0.1f * innerGlow),
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        animatedColor.copy(alpha = 0.12f * glowAlpha),
+                        animatedColor.copy(alpha = 0.04f),
+                        Color.Transparent
+                    ),
+                    center = center,
+                    radius = baseRadius * scale * 1.7f
+                ),
+                radius = baseRadius * scale * 1.7f,
+                center = center
+            )
+
+            // 3. Subtle texture ring (very faint)
+            drawCircle(
+                brush = Brush.radialGradient(
+                    0.6f to Color.Transparent,
+                    0.8f to animatedColor.copy(alpha = 0.06f * innerGlow),
                     1.0f to Color.Transparent,
                     center = center,
                     radius = baseRadius * scale * 1.4f
@@ -382,35 +504,28 @@ private fun BreathingCircle(count: Int) {
                 center = center
             )
 
-            // 3. Main Circle Body with "Texture" Gradient
-            // Using a complex radial gradient to simulate depth/texture
+            // 4. Main circle body - soft gradient, no hard edge
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        containerColor.copy(alpha = 0.9f),
-                        containerColor,
-                        primaryColor.copy(alpha = 0.1f)
+                        animatedColor.copy(alpha = 0.35f),
+                        animatedColor.copy(alpha = 0.2f),
+                        animatedColor.copy(alpha = 0.08f),
+                        Color.Transparent
                     ),
                     center = center,
-                    radius = baseRadius * scale
+                    radius = baseRadius * scale * 1.1f
                 ),
-                radius = baseRadius * scale,
+                radius = baseRadius * scale * 1.1f,
                 center = center
             )
-            
-            // 4. Subtle Rim / Border (Organic, not sharp)
+
+            // 5. Inner core glow
             drawCircle(
-                color = primaryColor.copy(alpha = 0.3f),
-                radius = baseRadius * scale,
-                center = center,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
-            )
-            
-            // 5. Inner Light (Glow from center)
-             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        surfaceColor.copy(alpha = 0.6f),
+                        surfaceColor.copy(alpha = 0.4f),
+                        animatedColor.copy(alpha = 0.15f),
                         Color.Transparent
                     ),
                     center = center,
@@ -420,8 +535,78 @@ private fun BreathingCircle(count: Int) {
                 center = center
             )
         }
-        // Text Content REMOVED as per user request
     }
+}
+
+/**
+ * 今日觉知时刻卡片 - 简约融入背景
+ */
+@Composable
+private fun AwarenessMomentsCard(
+    moments: List<AwarenessMoment>,
+    modifier: Modifier = Modifier
+) {
+    // Subtle colors that blend with background
+    val textColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val timeColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+    ) {
+        // Moments list - no title, just content
+        moments.forEachIndexed { index, moment ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp, horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Leaf icon
+                Text(
+                    text = "🌿",
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+
+                // Time badge - 使用资源 ID 动态获取字符串
+                Text(
+                    text = stringResource(moment.timeOfDayResId),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = timeColor,
+                    fontWeight = FontWeight.Medium
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Message - 使用资源 ID 和参数动态获取字符串
+                Text(
+                    text = stringResource(moment.messageResId, *moment.messageArgs),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = textColor,
+                    lineHeight = 18.sp,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // Subtle divider (except for last item)
+            if (index < moments.size - 1) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 40.dp, end = 16.dp),
+                    thickness = 0.5.dp,
+                    color = dividerColor
+                )
+            }
+        }
+    }
+}
+
+// Keep the old BreathingCircle for backward compatibility (unused)
+@Composable
+private fun BreathingCircle(count: Int) {
+    MindfulBreathingCircle(mindfulState = MindfulState.CALM)
 }
 
 

@@ -13,10 +13,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.slowdown.R
 import com.example.slowdown.data.local.entity.MonitoredApp
 import com.example.slowdown.data.preferences.UserPreferences
 import com.example.slowdown.data.repository.SlowDownRepository
 import com.example.slowdown.ui.onboarding.AppInfo
+import com.example.slowdown.util.MiuiHelper
 import com.example.slowdown.util.PermissionHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,49 +84,76 @@ class OnboardingViewModel(
     // Permissions
     // ========================================
     fun refreshPermissions() {
-        _permissionItems.value = listOf(
-            PermissionItem(
-                id = "accessibility",
-                title = "Accessibility Service",
-                description = "Monitor app launches for interventions",
-                icon = Icons.Outlined.Accessibility,
-                isGranted = PermissionHelper.isAccessibilityEnabled(context),
-                intentAction = Settings.ACTION_ACCESSIBILITY_SETTINGS,
+        val isMiui = PermissionHelper.isMiui()
+        val items = mutableListOf<PermissionItem>()
+
+        // 必要权限 - CRITICAL
+        items.add(PermissionItem(
+            id = "accessibility",
+            titleResId = R.string.accessibility_service,
+            descriptionResId = R.string.accessibility_subtitle,
+            icon = Icons.Outlined.Accessibility,
+            isGranted = PermissionHelper.isAccessibilityEnabled(context),
+            intentAction = Settings.ACTION_ACCESSIBILITY_SETTINGS,
+            priority = PermissionPriority.CRITICAL
+        ))
+
+        items.add(PermissionItem(
+            id = "overlay",
+            titleResId = R.string.overlay_permission,
+            descriptionResId = R.string.overlay_subtitle,
+            icon = Icons.Outlined.Layers,
+            isGranted = Settings.canDrawOverlays(context),
+            intentAction = Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            intentData = "package:${context.packageName}",
+            priority = PermissionPriority.CRITICAL
+        ))
+
+        items.add(PermissionItem(
+            id = "usage_stats",
+            titleResId = R.string.usage_stats,
+            descriptionResId = R.string.usage_subtitle,
+            icon = Icons.Outlined.QueryStats,
+            isGranted = PermissionHelper.hasUsageStatsPermission(context),
+            intentAction = Settings.ACTION_USAGE_ACCESS_SETTINGS,
+            priority = PermissionPriority.CRITICAL
+        ))
+
+        // MIUI 后台弹窗权限 - 仅 MIUI 设备显示，属于必要权限
+        if (isMiui) {
+            items.add(PermissionItem(
+                id = "miui_background_popup",
+                titleResId = R.string.background_popup,
+                descriptionResId = R.string.background_popup_subtitle,
+                icon = Icons.Outlined.OpenInNew,
+                isGranted = MiuiHelper.canBackgroundStart(context),
+                intentAction = "miui_app_settings",  // 特殊标识，在 requestPermission 中处理
                 priority = PermissionPriority.CRITICAL
-            ),
-            PermissionItem(
-                id = "overlay",
-                title = "Display Over Other Apps",
-                description = "Show breathing pause overlay",
-                icon = Icons.Outlined.Layers,
-                isGranted = Settings.canDrawOverlays(context),
-                intentAction = Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                intentData = "package:${context.packageName}",
-                priority = PermissionPriority.CRITICAL
-            ),
-            PermissionItem(
-                id = "usage_stats",
-                title = "Usage Access",
-                description = "Track app usage time",
-                icon = Icons.Outlined.QueryStats,
-                isGranted = PermissionHelper.hasUsageStatsPermission(context),
-                intentAction = Settings.ACTION_USAGE_ACCESS_SETTINGS,
-                priority = PermissionPriority.IMPORTANT
-            ),
-            PermissionItem(
-                id = "battery",
-                title = "Ignore Battery Optimization",
-                description = "Keep service running in background",
-                icon = Icons.Outlined.BatteryChargingFull,
-                isGranted = PermissionHelper.isIgnoringBatteryOptimizations(context),
-                intentAction = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                intentData = "package:${context.packageName}",
-                priority = PermissionPriority.OPTIONAL
-            )
-        )
+            ))
+        }
+
+        // 建议权限 - OPTIONAL
+        items.add(PermissionItem(
+            id = "battery",
+            titleResId = R.string.battery_optimization,
+            descriptionResId = R.string.battery_subtitle,
+            icon = Icons.Outlined.BatteryChargingFull,
+            isGranted = PermissionHelper.isIgnoringBatteryOptimizations(context),
+            intentAction = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+            intentData = "package:${context.packageName}",
+            priority = PermissionPriority.OPTIONAL
+        ))
+
+        _permissionItems.value = items
     }
 
     fun requestPermission(item: PermissionItem) {
+        // 处理 MIUI 特殊权限
+        if (item.intentAction == "miui_app_settings") {
+            PermissionHelper.openMiuiAppSettings(context)
+            return
+        }
+
         val intent = Intent(item.intentAction).apply {
             if (item.intentData != null) {
                 data = Uri.parse(item.intentData)
@@ -270,26 +299,25 @@ class OnboardingViewModel(
 
 /**
  * Permission priority levels
- * - CRITICAL: Core functionality depends on this (Accessibility, Overlay)
- * - IMPORTANT: Significant features depend on this (Usage Stats)
+ * - CRITICAL: Core functionality depends on this (Accessibility, Overlay, Usage Stats, MIUI Background Popup)
  * - OPTIONAL: Nice to have, but app works without it (Battery Optimization)
  */
 enum class PermissionPriority {
     CRITICAL,
-    IMPORTANT,
     OPTIONAL
 }
 
 /**
  * Data class representing a permission item in the onboarding flow
+ * Uses resource IDs for localization support
  */
 data class PermissionItem(
     val id: String,
-    val title: String,
-    val description: String,
+    val titleResId: Int,
+    val descriptionResId: Int,
     val icon: ImageVector,
     val isGranted: Boolean,
     val intentAction: String,
     val intentData: String? = null,
-    val priority: PermissionPriority = PermissionPriority.IMPORTANT
+    val priority: PermissionPriority = PermissionPriority.CRITICAL
 )

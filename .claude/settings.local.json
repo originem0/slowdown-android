@@ -87,7 +87,16 @@
       "Bash(JAVA_HOME=\"D:/Scoop/apps/temurin21-jdk/current\" ./gradlew:*)",
       "Bash(echo:*)",
       "Bash(JAVA_HOME=\"/d/Scoop/apps/temurin21-jdk/current\" ./gradlew:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Skill(ui-ux-pro-max)",
+      "Bash(python3:*)",
+      "Bash(iconv:*)",
+      "Bash(./gradlew clean)",
+      "Bash(./gradlew:*)",
+      "Bash(JAVA_HOME=\"D:\\\\Scoop\\\\apps\\\\temurin21-jdk\\\\current\" ./gradlew assembleDebug:*)",
+      "Bash(JAVA_HOME=\"D:/Scoop/apps/temurin21-jdk/current\" ./gradlew compileDebugKotlin)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew:*)",
+      "Bash(taskkill /F /PID 25536 /PID 28768)"
     ]
   }
 }
