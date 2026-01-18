@@ -18,3 +18,5 @@ local.properties
 .agent/
 .shared/
 nul
+__pycache__/
+*.pyc

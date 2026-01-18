@@ -10,11 +10,13 @@ import com.example.slowdown.data.repository.SlowDownRepository
 import com.example.slowdown.util.AppInfo
 import com.example.slowdown.util.PackageUtils
 import com.example.slowdown.util.formatDuration
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -30,6 +32,10 @@ class StatisticsViewModel(
     private val repository: SlowDownRepository,
     private val context: Context
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "StatisticsViewModel"
+    }
 
     // 日期格式化
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy年M月d日", Locale.CHINESE)
@@ -153,92 +159,103 @@ class StatisticsViewModel(
                     return@collectLatest
                 }
 
-                // 在 IO 线程执行数据库查询
-                withContext(Dispatchers.IO) {
-                    // 使用选择的日期
-                    val targetDate = selectedDate
-                    val targetDateStr = targetDate.toString()
-                    val yesterdayStr = targetDate.minusDays(1).toString()
+                // 在 IO 线程执行数据库查询，添加错误处理和超时保护
+                try {
+                    val result = withTimeoutOrNull(10_000L) { // 10 秒超时
+                        withContext(Dispatchers.IO) {
+                        // 使用选择的日期
+                        val targetDate = selectedDate
+                        val targetDateStr = targetDate.toString()
+                        val yesterdayStr = targetDate.minusDays(1).toString()
 
-                    // 获取所选日期所在周的范围（周一到周日）
-                    val (weekStart, _) = getWeekRange(targetDate)
+                        // 获取所选日期所在周的范围（周一到周日）
+                        val (weekStart, _) = getWeekRange(targetDate)
 
-                    // 获取所选日期所在月的开始日期
-                    val monthStart = targetDate.withDayOfMonth(1)
+                        // 获取所选日期所在月的开始日期
+                        val monthStart = targetDate.withDayOfMonth(1)
 
-                    // 收集各应用目标日期数据
-                    val todayAppUsages = mutableListOf<AppUsageData>()
-                    var totalToday = 0
-                    var totalYesterday = 0
+                        // 收集各应用目标日期数据
+                        val todayAppUsages = mutableListOf<AppUsageData>()
+                        var totalToday = 0
+                        var totalYesterday = 0
 
-                    for (app in monitoredApps) {
-                        // 目标日期数据
-                        val record = repository.getUsageRecord(app.packageName, targetDateStr)
-                        val minutes = record?.usageMinutes ?: 0
-                        totalToday += minutes
+                        for (app in monitoredApps) {
+                            // 目标日期数据
+                            val record = repository.getUsageRecord(app.packageName, targetDateStr)
+                            val minutes = record?.usageMinutes ?: 0
+                            totalToday += minutes
 
-                        // 前一天数据（用于对比）
-                        val yesterdayRecord = repository.getUsageRecord(app.packageName, yesterdayStr)
-                        totalYesterday += yesterdayRecord?.usageMinutes ?: 0
+                            // 前一天数据（用于对比）
+                            val yesterdayRecord = repository.getUsageRecord(app.packageName, yesterdayStr)
+                            totalYesterday += yesterdayRecord?.usageMinutes ?: 0
 
-                        if (minutes > 0) {
-                            val appInfo = installedApps[app.packageName]
-                            todayAppUsages.add(
-                                AppUsageData(
-                                    packageName = app.packageName,
-                                    appName = appInfo?.appName ?: app.packageName.substringAfterLast('.'),
-                                    appInfo = appInfo,
-                                    usageMinutes = minutes,
-                                    dailyLimitMinutes = app.dailyLimitMinutes
+                            if (minutes > 0) {
+                                val appInfo = installedApps[app.packageName]
+                                todayAppUsages.add(
+                                    AppUsageData(
+                                        packageName = app.packageName,
+                                        appName = appInfo?.appName ?: app.packageName.substringAfterLast('.'),
+                                        appInfo = appInfo,
+                                        usageMinutes = minutes,
+                                        dailyLimitMinutes = app.dailyLimitMinutes
+                                    )
                                 )
-                            )
-                        }
-                    }
-
-                    _todayTotalMinutes.value = totalToday
-                    _yesterdayTotalMinutes.value = totalYesterday
-                    _todayUsageByApp.value = todayAppUsages.sortedByDescending { it.usageMinutes }
-
-                    // 收集本周每日数据（周一到周日，显示完整一周）
-                    val weekDays = mutableListOf<DayUsageData>()
-                    val today = LocalDate.now()
-                    for (dayOffset in 0L until 7L) {
-                        val date = weekStart.plusDays(dayOffset)
-                        val dateStr = date.toString()
-                        var dayTotal = 0
-
-                        // 只有不超过今天的日期才有数据
-                        if (date <= today) {
-                            for (app in monitoredApps) {
-                                val record = repository.getUsageRecord(app.packageName, dateStr)
-                                dayTotal += record?.usageMinutes ?: 0
                             }
                         }
 
-                        weekDays.add(
-                            DayUsageData(
-                                date = date,
-                                dayOfWeek = getDayOfWeekChinese(date.dayOfWeek),
-                                totalMinutes = dayTotal,
-                                isSelected = date == targetDate
-                            )
-                        )
-                    }
-                    _weeklyUsage.value = weekDays
+                        _todayTotalMinutes.value = totalToday
+                        _yesterdayTotalMinutes.value = totalYesterday
+                        _todayUsageByApp.value = todayAppUsages.sortedByDescending { it.usageMinutes }
 
-                    // 计算本月总计（从月初到选择的日期或今天，取较小者）
-                    val monthEndDate = if (targetDate > today) today else targetDate
-                    var monthTotal = 0
-                    var monthDayOffset = 0L
-                    while (monthStart.plusDays(monthDayOffset) <= monthEndDate) {
-                        val dateStr = monthStart.plusDays(monthDayOffset).toString()
-                        for (app in monitoredApps) {
-                            val record = repository.getUsageRecord(app.packageName, dateStr)
-                            monthTotal += record?.usageMinutes ?: 0
+                        // 收集本周每日数据（周一到周日，显示完整一周）
+                        val weekDays = mutableListOf<DayUsageData>()
+                        val today = LocalDate.now()
+                        for (dayOffset in 0L until 7L) {
+                            val date = weekStart.plusDays(dayOffset)
+                            val dateStr = date.toString()
+                            var dayTotal = 0
+
+                            // 只有不超过今天的日期才有数据
+                            if (date <= today) {
+                                for (app in monitoredApps) {
+                                    val record = repository.getUsageRecord(app.packageName, dateStr)
+                                    dayTotal += record?.usageMinutes ?: 0
+                                }
+                            }
+
+                            weekDays.add(
+                                DayUsageData(
+                                    date = date,
+                                    dayOfWeek = getDayOfWeekChinese(date.dayOfWeek),
+                                    totalMinutes = dayTotal,
+                                    isSelected = date == targetDate
+                                )
+                            )
                         }
-                        monthDayOffset++
+                        _weeklyUsage.value = weekDays
+
+                        // 计算本月总计（从月初到选择的日期或今天，取较小者）
+                        val monthEndDate = if (targetDate > today) today else targetDate
+                        var monthTotal = 0
+                        var monthDayOffset = 0L
+                        while (monthStart.plusDays(monthDayOffset) <= monthEndDate) {
+                            val dateStr = monthStart.plusDays(monthDayOffset).toString()
+                            for (app in monitoredApps) {
+                                val record = repository.getUsageRecord(app.packageName, dateStr)
+                                monthTotal += record?.usageMinutes ?: 0
+                            }
+                            monthDayOffset++
+                        }
+                        _monthTotalMinutes.value = monthTotal
+                        }
+                        true // 返回成功标志
                     }
-                    _monthTotalMinutes.value = monthTotal
+                    if (result == null) {
+                        Log.w(TAG, "Statistics loading timed out after 10 seconds")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to load statistics: ${e.message}", e)
+                    // 出错时保持当前数据，不清空
                 }
 
                 _isLoading.value = false

@@ -282,12 +282,13 @@ class UsageTrackingManager(
      * 停止实时追踪
      */
     fun stopRealtimeTracking() {
-        if (isRealtimeTrackingEnabled && currentTrackingPackage != null) {
+        val packageToRecord = currentTrackingPackage
+        if (isRealtimeTrackingEnabled && packageToRecord != null) {
             // 记录最后一段时间
             val duration = System.currentTimeMillis() - trackingStartTime
             if (duration > 0) {
                 scope.launch {
-                    recordForegroundTimeInternal(currentTrackingPackage!!, duration)
+                    recordForegroundTimeInternal(packageToRecord, duration)
                 }
             }
         }

@@ -24,6 +24,7 @@ class UserPreferences(private val context: Context) {
         val MIUI_BATTERY_SAVER_CONFIRMED = booleanPreferencesKey("miui_battery_saver_confirmed")
         val MIUI_LOCK_APP_CONFIRMED = booleanPreferencesKey("miui_lock_app_confirmed")
         val APP_LANGUAGE = stringPreferencesKey("app_language")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
     val serviceEnabled: Flow<Boolean> = context.dataStore.data
@@ -95,6 +96,15 @@ class UserPreferences(private val context: Context) {
     suspend fun setAppLanguage(language: String) {
         context.dataStore.edit { preferences ->
             preferences[APP_LANGUAGE] = language
+        }
+    }
+
+    val onboardingCompleted: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[ONBOARDING_COMPLETED] ?: false }
+
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[ONBOARDING_COMPLETED] = completed
         }
     }
 }

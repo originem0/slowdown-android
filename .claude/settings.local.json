@@ -72,7 +72,22 @@
       "Bash(./gradlew.bat:*)",
       "Skill(superpowers:executing-plans)",
       "Bash(kotlinc:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(more:*)",
+      "Bash(scoop search:*)",
+      "Bash(scoop bucket list:*)",
+      "Bash(scoop install:*)",
+      "Bash(scoop reset:*)",
+      "Bash(java -version:*)",
+      "Bash(echo $env:JAVA_HOME)",
+      "Bash(D:/Scoop/apps/temurin21-jdk/current/bin/java:*)",
+      "Bash(JAVA_HOME=\"D:/Scoop/apps/temurin21-jdk/current\" ./gradlew assembleDebug:*)",
+      "Bash(where java)",
+      "Bash(scoop list:*)",
+      "Bash(JAVA_HOME=\"D:/Scoop/apps/temurin21-jdk/current\" ./gradlew:*)",
+      "Bash(echo:*)",
+      "Bash(JAVA_HOME=\"/d/Scoop/apps/temurin21-jdk/current\" ./gradlew:*)",
+      "Bash(git reset:*)"
     ]
   }
 }

@@ -8,6 +8,7 @@
     <string name="today">今日</string>
     <string name="intercepts">次拦截</string>
     <string name="min_saved">分钟节省</string>
+    <string name="success_rate">觉察率</string>
     <string name="weekly_mindful_moments">本周趋势</string>
     <string name="most_intercepted">最常拦截</string>
     <string name="view_all_apps">查看全部应用</string>
@@ -75,7 +76,7 @@
     <string name="lock_app">锁定应用</string>
     <string name="lock_app_subtitle">在最近任务中下拉 SlowDown 卡片，点击「锁定」</string>
     <string name="confirmed">已完成</string>
-    <string name="confirm">已开启</string>
+    <string name="confirm">确认</string>
     <string name="refresh">刷新</string>
 
     <!-- MIUI Permission Detection -->
@@ -159,4 +160,33 @@
     <string name="duration_hours_minutes">%1$d小时 %2$d分钟</string>
     <string name="duration_hours_only">%d小时</string>
     <string name="duration_minutes_only">%d分钟</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">夺回你的时间</string>
+    <string name="onboarding_welcome_subtitle">慢一点通过正念干预帮你建立更健康的数字习惯</string>
+    <string name="onboarding_value_1">在打开分心应用前暂停一下</string>
+    <string name="onboarding_value_2">了解自己的使用习惯</string>
+    <string name="onboarding_value_3">追踪进步，庆祝每一次小胜利</string>
+    <string name="onboarding_get_started">开始使用</string>
+
+    <string name="onboarding_permissions_title">开启权限</string>
+    <string name="onboarding_permissions_subtitle">慢一点需要一些权限才能正常工作。我们只用它来帮助你保持专注。</string>
+    <string name="onboarding_permissions_warning">部分核心权限未授予，应用可能无法正常工作。</string>
+    <string name="onboarding_refresh_permissions">刷新权限状态</string>
+    <string name="onboarding_continue">继续</string>
+    <string name="onboarding_grant_all">授予全部权限</string>
+
+    <string name="onboarding_apps_title">选择要监控的应用</string>
+    <string name="onboarding_apps_subtitle">选择最容易让你分心的应用。你随时可以在设置中修改。</string>
+    <string name="onboarding_apps_selected">已选择 %d 个应用</string>
+    <string name="onboarding_suggested_apps">推荐监控</string>
+    <string name="onboarding_other_apps">其他应用</string>
+    <string name="onboarding_skip_for_now">暂时跳过</string>
+
+    <string name="onboarding_complete_title">设置完成！</string>
+    <string name="onboarding_complete_subtitle">慢一点现在开始保护你。深呼吸，开始你的数字健康之旅吧。</string>
+    <string name="onboarding_apps_monitored">监控应用</string>
+    <string name="onboarding_default_mode">默认模式</string>
+    <string name="onboarding_gentle_mode_short">温和</string>
+    <string name="onboarding_start_journey">开始旅程</string>
 </resources>

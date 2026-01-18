@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -57,6 +58,7 @@ class OverlayActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         Log.d(TAG, "[Overlay] onCreate called")
 
         // 取消通知
@@ -177,10 +179,14 @@ private fun MindfulOverlayScreen(
         )
     }
 
+    // 备用纯色背景（确保渐变渲染失败时不会是透明/黑色）
+    val fallbackBackground = if (isLimitReached) Color(0xFF2A2632) else Color(0xFF1A2632)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundGradient),
+            .background(fallbackBackground)  // 底层纯色备用
+            .background(backgroundGradient), // 上层渐变
         contentAlignment = Alignment.Center
     ) {
         // 背景装饰 - 柔和的圆形

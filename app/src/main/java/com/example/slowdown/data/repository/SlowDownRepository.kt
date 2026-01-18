@@ -4,6 +4,7 @@ import com.example.slowdown.data.local.dao.AppStat
 import com.example.slowdown.data.local.dao.DailyStat
 import com.example.slowdown.data.local.dao.InterventionDao
 import com.example.slowdown.data.local.dao.MonitoredAppDao
+import com.example.slowdown.data.local.dao.SuccessRateStat
 import com.example.slowdown.data.local.dao.UsageRecordDao
 import com.example.slowdown.data.local.entity.InterventionRecord
 import com.example.slowdown.data.local.entity.MonitoredApp
@@ -55,6 +56,7 @@ class SlowDownRepository(
 
     fun getTodayCount(): Flow<Int> = interventionDao.getCountSince(getTodayStart())
     fun getTodaySavedMinutes(): Flow<Int> = interventionDao.getSavedMinutesSince(getTodayStart())
+    fun getTodaySuccessRate(): Flow<SuccessRateStat> = interventionDao.getSuccessRateSince(getTodayStart())
     fun getWeeklyStats(): Flow<List<DailyStat>> = interventionDao.getDailyStats(getWeekStart())
     fun getTopApps(): Flow<List<AppStat>> = interventionDao.getTopApps(getWeekStart())
     fun getRecentInterventions(limit: Int = 20): Flow<List<InterventionRecord>> = interventionDao.getRecent(limit)

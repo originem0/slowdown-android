@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.slowdown.data.local.dao.AppStat
 import com.example.slowdown.data.local.dao.DailyStat
+import com.example.slowdown.data.local.dao.SuccessRateStat
 import com.example.slowdown.data.repository.SlowDownRepository
 import com.example.slowdown.util.MiuiHelper
 import com.example.slowdown.util.PermissionHelper
@@ -25,8 +26,8 @@ class DashboardViewModel(
     val todayCount: StateFlow<Int> = repository.getTodayCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val todaySavedMinutes: StateFlow<Int> = repository.getTodaySavedMinutes()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    val todaySuccessRate: StateFlow<SuccessRateStat> = repository.getTodaySuccessRate()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SuccessRateStat(0, 0))
 
     val weeklyStats: StateFlow<List<DailyStat>> = repository.getWeeklyStats()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

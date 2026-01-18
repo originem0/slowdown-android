@@ -32,6 +32,7 @@ import androidx.compose.foundation.Canvas
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.slowdown.data.local.dao.AppStat
+import com.example.slowdown.data.local.dao.SuccessRateStat
 import com.example.slowdown.ui.components.*
 import com.example.slowdown.viewmodel.DashboardViewModel
 import com.example.slowdown.viewmodel.PermissionState
@@ -45,7 +46,7 @@ fun DashboardScreen(
     onNavigateToSettings: () -> Unit
 ) {
     val todayCount by viewModel.todayCount.collectAsState()
-    val savedMinutes by viewModel.todaySavedMinutes.collectAsState()
+    val successRate by viewModel.todaySuccessRate.collectAsState()
     val topApps by viewModel.topApps.collectAsState()
     val serviceEnabled by viewModel.serviceEnabled.collectAsState()
     val permissionState by viewModel.permissionState.collectAsState()
@@ -100,7 +101,7 @@ fun DashboardScreen(
 
             // Stats Cards
             item {
-                StatsOverview(count = todayCount, savedMinutes = savedMinutes)
+                StatsOverview(count = todayCount, successRate = successRate)
             }
 
             // Top Intercepted Apps
@@ -235,18 +236,25 @@ private fun StatusHeader(
 }
 
 @Composable
-private fun StatsOverview(count: Int, savedMinutes: Int) {
+private fun StatsOverview(count: Int, successRate: SuccessRateStat) {
+    // 计算成功率百分比
+    val successPercent = if (successRate.total > 0) {
+        (successRate.successful * 100 / successRate.total)
+    } else {
+        0
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(4.dp)) // Minimal top spacer
-        
+
         // Main Breathing Circle
         BreathingCircle(count = count)
-        
+
         Spacer(modifier = Modifier.height(24.dp)) // Reduced spacer
-        
+
         // Stats Row
         Row(
             modifier = Modifier
@@ -259,7 +267,7 @@ private fun StatsOverview(count: Int, savedMinutes: Int) {
                 label = stringResource(R.string.intercepts),
                 icon = null
             )
-            
+
             Box(
                 modifier = Modifier
                     .height(40.dp)
@@ -267,14 +275,14 @@ private fun StatsOverview(count: Int, savedMinutes: Int) {
                     .background(MaterialTheme.colorScheme.outlineVariant)
                     .align(Alignment.CenterVertically)
             )
-            
+
             StatItem(
-                value = savedMinutes.toString(),
-                label = stringResource(R.string.min_saved),
+                value = "$successPercent%",
+                label = stringResource(R.string.success_rate),
                 icon = null
             )
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 }

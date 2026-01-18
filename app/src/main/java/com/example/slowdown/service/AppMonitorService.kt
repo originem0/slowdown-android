@@ -29,7 +29,7 @@ class AppMonitorService : AccessibilityService() {
     }
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private val cooldownMap = mutableMapOf<String, Long>()
+    private val cooldownMap = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
     // 使用时间追踪
     private lateinit var usageTrackingManager: UsageTrackingManager
@@ -272,11 +272,12 @@ class AppMonitorService : AccessibilityService() {
         // 只有切换到不同应用时才记录使用时间和重置追踪
         if (!isSameApp) {
             // 记录上一个应用的使用时间
-            if (usageTrackingManager.isRealtimeTrackingEnabled() && currentForegroundApp != null && foregroundStartTime > 0) {
+            val previousApp = currentForegroundApp
+            if (usageTrackingManager.isRealtimeTrackingEnabled() && previousApp != null && foregroundStartTime > 0) {
                 val duration = System.currentTimeMillis() - foregroundStartTime
                 if (duration > 0) {
-                    usageTrackingManager.recordForegroundTime(currentForegroundApp!!, duration)
-                    Log.d(TAG, "[UsageTracking] Recorded ${duration}ms for $currentForegroundApp")
+                    usageTrackingManager.recordForegroundTime(previousApp, duration)
+                    Log.d(TAG, "[UsageTracking] Recorded ${duration}ms for $previousApp")
                 }
             }
 

@@ -8,6 +8,7 @@
     <string name="today">Today</string>
     <string name="intercepts">Intercepts</string>
     <string name="min_saved">Min Saved</string>
+    <string name="success_rate">Success Rate</string>
     <string name="weekly_mindful_moments">Weekly Mindful Moments</string>
     <string name="most_intercepted">Most Intercepted</string>
     <string name="view_all_apps">View All Apps</string>
@@ -159,4 +160,33 @@
     <string name="duration_hours_minutes">%1$dh %2$dm</string>
     <string name="duration_hours_only">%dh</string>
     <string name="duration_minutes_only">%dm</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">Take Back Your Time</string>
+    <string name="onboarding_welcome_subtitle">SlowDown helps you build healthier digital habits through mindful interventions</string>
+    <string name="onboarding_value_1">Pause before opening distracting apps</string>
+    <string name="onboarding_value_2">Build awareness of your usage patterns</string>
+    <string name="onboarding_value_3">Track progress and celebrate wins</string>
+    <string name="onboarding_get_started">Get Started</string>
+
+    <string name="onboarding_permissions_title">Enable Permissions</string>
+    <string name="onboarding_permissions_subtitle">SlowDown needs a few permissions to work properly. We only use them to help you stay focused.</string>
+    <string name="onboarding_permissions_warning">Some core permissions are not granted. The app may not work as expected.</string>
+    <string name="onboarding_refresh_permissions">Refresh permission status</string>
+    <string name="onboarding_continue">Continue</string>
+    <string name="onboarding_grant_all">Grant All Permissions</string>
+
+    <string name="onboarding_apps_title">Choose Apps to Monitor</string>
+    <string name="onboarding_apps_subtitle">Select the apps that distract you the most. You can always change this later.</string>
+    <string name="onboarding_apps_selected">%d apps selected</string>
+    <string name="onboarding_suggested_apps">Suggested Apps</string>
+    <string name="onboarding_other_apps">Other Apps</string>
+    <string name="onboarding_skip_for_now">Skip for now</string>
+
+    <string name="onboarding_complete_title">You\'re All Set!</string>
+    <string name="onboarding_complete_subtitle">SlowDown is now protecting you. Take a deep breath and enjoy your digital wellness journey.</string>
+    <string name="onboarding_apps_monitored">Apps Monitored</string>
+    <string name="onboarding_default_mode">Default Mode</string>
+    <string name="onboarding_gentle_mode_short">Gentle</string>
+    <string name="onboarding_start_journey">Start Your Journey</string>
 </resources>

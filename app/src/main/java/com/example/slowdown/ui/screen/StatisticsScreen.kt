@@ -400,7 +400,7 @@ private fun AppUsageItem(
 
                     // 显示 "45分/60分" 格式
                     Text(
-                        text = "${formatDuration(app.usageMinutes)}/${formatDuration(app.dailyLimitMinutes!!)}",
+                        text = "${formatDuration(app.usageMinutes)}/${formatDuration(app.dailyLimitMinutes ?: 0)}",
                         style = MaterialTheme.typography.labelMedium,
                         color = progressColor,
                         fontWeight = FontWeight.Medium

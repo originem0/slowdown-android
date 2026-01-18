@@ -2,4 +2,6 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <!-- Overlay 背景色，与 Compose 渐变起始色一致 -->
+    <color name="overlay_background">#FF1A2632</color>
 </resources>

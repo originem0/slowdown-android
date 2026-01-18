@@ -1,6 +1,7 @@
 package com.example.slowdown.viewmodel
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -10,11 +11,16 @@ import com.example.slowdown.util.AppInfo
 import com.example.slowdown.util.PackageUtils
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 class AppListViewModel(
     private val repository: SlowDownRepository,
     private val context: Context
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "AppListViewModel"
+    }
 
     private val _installedApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val installedApps: StateFlow<List<AppInfo>> = _installedApps.asStateFlow()
@@ -40,26 +46,42 @@ class AppListViewModel(
     private fun loadInstalledApps() {
         viewModelScope.launch {
             _isLoading.value = true
-            _installedApps.value = PackageUtils.getInstalledApps(context)
+            try {
+                val apps = withTimeoutOrNull(15_000L) { // 15 秒超时
+                    PackageUtils.getInstalledApps(context)
+                }
+                if (apps != null) {
+                    _installedApps.value = apps
+                } else {
+                    Log.w(TAG, "Loading installed apps timed out after 15 seconds")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load installed apps: ${e.message}", e)
+            }
             _isLoading.value = false
         }
     }
 
     private fun observeUsage() {
         viewModelScope.launch {
-            monitoredApps.collect { apps ->
+            // 使用 collectLatest 而非 collect：当 monitoredApps 变化时，
+            // 会自动取消之前的内部 collect 协程，防止内存泄漏
+            monitoredApps.collectLatest { apps ->
+                if (apps.isEmpty()) {
+                    _usageMap.value = emptyMap()
+                    return@collectLatest
+                }
+
                 val usageFlows = apps.map { app ->
                     repository.getTodayUsage(app.packageName).map { usage ->
                         app.packageName to usage
                     }
                 }
 
-                if (usageFlows.isNotEmpty()) {
-                    combine(usageFlows) { usageArray ->
-                        usageArray.toMap()
-                    }.collect { usageData ->
-                        _usageMap.value = usageData
-                    }
+                combine(usageFlows) { usageArray ->
+                    usageArray.toMap()
+                }.collect { usageData ->
+                    _usageMap.value = usageData
                 }
             }
         }
@@ -67,24 +89,32 @@ class AppListViewModel(
 
     fun toggleApp(appInfo: AppInfo, isMonitored: Boolean) {
         viewModelScope.launch {
-            if (isMonitored) {
-                repository.removeMonitoredApp(appInfo.packageName)
-            } else {
-                val countdown = defaultCountdown.value
-                repository.addMonitoredApp(
-                    MonitoredApp(
-                        packageName = appInfo.packageName,
-                        appName = appInfo.appName,
-                        countdownSeconds = countdown
+            try {
+                if (isMonitored) {
+                    repository.removeMonitoredApp(appInfo.packageName)
+                } else {
+                    val countdown = defaultCountdown.value
+                    repository.addMonitoredApp(
+                        MonitoredApp(
+                            packageName = appInfo.packageName,
+                            appName = appInfo.appName,
+                            countdownSeconds = countdown
+                        )
                     )
-                )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to toggle app ${appInfo.packageName}: ${e.message}", e)
             }
         }
     }
 
     fun updateAppConfig(app: MonitoredApp) {
         viewModelScope.launch {
-            repository.updateMonitoredApp(app)
+            try {
+                repository.updateMonitoredApp(app)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update app config ${app.packageName}: ${e.message}", e)
+            }
         }
     }
 

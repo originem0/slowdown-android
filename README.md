@@ -2,228 +2,129 @@
 
 <div align="center">
   <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" width="120" alt="SlowDown Logo"/>
-  
-  **A privacy-first digital mindfulness app for Android**
-  
-  *帮助用户养成更健康的智能手机使用习惯*
 
-  [![Android](https://img.shields.io/badge/Android-SDK%2034-green)](https://developer.android.com)
-  [![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue)](https://kotlinlang.org)
-  [![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-purple)](https://developer.android.com/jetpack/compose)
+  **让你在打开手机应用前，先深呼吸一下**
+
+  [![Android](https://img.shields.io/badge/Android-8.0+-green)](https://developer.android.com)
   [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 </div>
 
 ---
 
-## ✨ Features
+## 这是什么？
 
-### 🧘 Mindful Intervention
-- **Breathing Pause**: Shows a calming breathing animation when opening monitored apps
-- **Gentle Reminders**: Non-intrusive prompts to reflect before continuing
-- **Strict Limits**: Enforce daily time limits with automatic app blocking
+SlowDown 是一款帮助你减少手机沉迷的 Android 应用。
 
-### 📊 Usage Insights
-- **Daily Statistics**: Track screen time per app with beautiful charts
-- **Weekly Trends**: Visualize usage patterns over time
-- **Intervention Counter**: See how many times you've been protected
+当你习惯性地打开抖音、微博、小红书时，SlowDown 会弹出一个深呼吸界面，让你等待几秒钟。这短短的几秒，足以让你意识到自己在做什么，然后做出更好的选择。
 
-### 🔒 Privacy First
-- **100% Local Storage**: All data stays on your device
-- **No Cloud Sync**: No accounts, no servers, no tracking
-- **Open Source**: Fully transparent codebase
-
-### 🌍 Bilingual Support
-- **中文 / English**: Full internationalization support
-- **Runtime Switching**: Change language without restart
+**不是强制戒断，而是温柔提醒。**
 
 ---
 
-## 📱 Screenshots
+## 为什么选择 SlowDown？
 
-| Dashboard | App List | Statistics |
-|:---------:|:--------:|:----------:|
-| Breathing Circle | Protected Apps | Usage Charts |
+### 与其他限时应用的区别
 
----
+| 特点 | SlowDown | 其他应用 |
+|------|----------|----------|
+| **干预方式** | 深呼吸等待，温柔提醒 | 直接锁死，强制禁用 |
+| **隐私保护** | 数据全部存在本地，不联网 | 通常需要注册账号、云同步 |
+| **使用体验** | 尊重用户选择，可随时继续 | 常有"绕过限制"的挫败感 |
+| **设计理念** | 培养觉察，而非对抗 | 把用户当敌人 |
 
-## 🚀 Quick Start
+### 核心理念
 
-### Prerequisites
-
-| Requirement | Version |
-|-------------|---------|
-| Android Studio | Hedgehog (2023.1.1)+ |
-| JDK | 17+ |
-| Android SDK | 34 |
-| Kotlin | 2.0+ |
-
-### Build & Install
-
-```bash
-# Clone the repository
-git clone https://github.com/originem0/SlowDown.git
-cd SlowDown
-
-# Build Debug APK
-./gradlew assembleDebug
-
-# Install to connected device
-./gradlew installDebug
-```
-
-### Required Permissions
-
-After installation, grant the following permissions:
-
-| Permission | Location | Purpose |
-|------------|----------|---------|
-| **Accessibility Service** | Settings → Accessibility → SlowDown | Monitor app launches |
-| **Display Over Other Apps** | Settings → Apps → SlowDown → Display over other apps | Show breathing overlay |
-| **Usage Access** | Settings → Security → Usage access → SlowDown | Read app usage time |
+- **觉察优先**：问题不是"你不该用手机"，而是"你是否意识到自己在用"
+- **不制造焦虑**：没有恐吓式的"你已浪费 X 小时"，只有平静的深呼吸
+- **尊重选择**：等待后可以继续使用，决定权始终在你手中
 
 ---
 
-## 📖 Usage Guide
+## 功能介绍
 
-### Adding Apps to Monitor
+### 深呼吸干预
 
-1. Open SlowDown
-2. Navigate to the **Apps** tab
-3. Tap **+** on any app in the "Available" list
-4. Tap the app to configure its restriction mode
+打开监控应用时，显示一个带呼吸动画的等待界面：
 
-### Restriction Modes
+- 跟随圆圈深呼吸
+- 倒计时结束后可选择继续或离开
+- 可设置跳转到替代应用（比如：想刷抖音 → 去看书）
 
-| Mode | Behavior |
-|------|----------|
-| **Tracking Only** | Records usage time silently |
-| **Gentle Reminder** | Shows breathing pause, user can dismiss |
-| **Strict Mode** | Enforces daily limit, blocks when exceeded |
+### 使用时间限制
 
-### Time Limits
+为每个应用设置每日使用上限：
 
-- Set daily limits (in minutes) per app
-- Warning at 80% usage
-- Enforcement at 100% based on mode
+| 模式 | 说明 |
+|------|------|
+| **仅记录** | 只统计时间，不做干预 |
+| **温和提醒** | 达到限额后提醒，但可继续使用 |
+| **严格限制** | 达到限额后强制停止，无法继续 |
 
----
+### 使用统计
 
-## 🏗️ Architecture
+- 今日拦截次数
+- 觉察率（选择放弃使用的比例）
+- 本周使用趋势
+- 最常拦截的应用
 
-```
-app/src/main/java/com/example/slowdown/
-├── data/
-│   ├── local/
-│   │   ├── dao/           # Room DAO interfaces
-│   │   ├── entity/        # Data entities
-│   │   └── AppDatabase.kt # Room database
-│   ├── preferences/       # DataStore preferences
-│   └── repository/        # Data repositories
-├── service/
-│   ├── AppMonitorService.kt    # AccessibilityService (core)
-│   ├── OverlayService.kt       # Breathing overlay
-│   └── UsageTrackingManager.kt # Usage time tracking
-├── ui/
-│   ├── components/        # Reusable Compose components
-│   ├── navigation/        # NavGraph
-│   ├── overlay/           # Overlay Activity
-│   ├── screen/            # Main screens
-│   └── theme/             # Material 3 theming
-├── viewmodel/             # ViewModels
-└── util/                  # Utility classes
-```
+### 其他特性
 
-### Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| UI | Jetpack Compose + Material 3 |
-| Architecture | MVVM + Repository Pattern |
-| Database | Room |
-| Async | Kotlin Coroutines + Flow |
-| DI | Manual (Application-level singletons) |
-
-### Key Design Decisions
-
-#### Passive Event Triggering
-The overlay is triggered by `AccessibilityEvent` rather than polling:
-- Battery efficient
-- Non-invasive
-- Only intervenes on user action
-
-#### Three-Layer Foreground Verification
-Prevents false positives:
-1. **Event Reception**: Clears tracking when switching to SlowDown/system apps
-2. **Warning Check**: Validates via `rootInActiveWindow`
-3. **Pre-Overlay**: Final foreground verification
+- 支持中文/英文切换
+- 所有数据本地存储，保护隐私
+- 简洁美观的界面设计
 
 ---
 
-## 🎨 Design Language
+## 如何使用
 
-### Visual Identity
-- **Breathing Circle**: 320dp animated orb with multi-layer gradients
-- **Skeuomorphic Depth**: Soft shadows and glows for tactile feel
-- **Embedded Flat**: Inset search bars and minimal cards
+### 1. 安装并授权
 
-### Color Palette
-- **Primary**: Teal/Cyan (Focus, Calm)
-- **Secondary**: Warm Sand (Comfort)
-- **Surface**: Neutral Grays (Readability)
+安装后需要开启以下权限：
 
----
+| 权限 | 位置 | 作用 |
+|------|------|------|
+| 无障碍服务 | 设置 → 无障碍 → SlowDown | 检测应用启动 |
+| 悬浮窗权限 | 设置 → 应用 → SlowDown → 悬浮窗 | 显示深呼吸界面 |
+| 使用情况访问 | 设置 → 安全 → 使用情况访问 | 读取应用使用时间 |
 
-## 📚 Documentation
+### 2. 添加监控应用
 
-| Document | Description |
-|----------|-------------|
-| [Function Spec](docs/function.md) | Detailed feature documentation |
-| [Popup Logic](docs/popup-logic-flowchart.md) | Overlay trigger mechanism |
-| [i18n Plan](docs/plans/2025-01-17-remaining-screens-i18n.md) | Internationalization implementation |
+1. 打开 SlowDown，进入「应用列表」
+2. 点击想要监控的应用右侧的 **+** 按钮
+3. 点击已添加的应用，设置限制模式和时间
 
----
+### 3. 开始使用
 
-## 🛠️ Development Notes
-
-### Atomic State Updates
-Always use `updateRestrictionMode()` for multi-field changes:
-```kotlin
-// ✅ Correct
-viewModel.updateRestrictionMode(mode, limit)
-
-// ❌ Incorrect
-viewModel.setMode(mode)
-viewModel.setLimit(limit)
-```
-
-### CJK Search Normalization
-Handle full-width characters from IME:
-```kotlin
-val normalized = query.lowercase(Locale.ROOT).toHalfWidth()
-```
-
-### AccessibilityService Configuration
-- Configure in `accessibility_service_config.xml`
-- Use `rootInActiveWindow` for foreground detection
-- Handle null cases gracefully
+设置完成后，正常使用手机即可。当你打开被监控的应用时，SlowDown 会自动弹出深呼吸界面。
 
 ---
 
-## 🤝 Contributing
+## 常见问题
 
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Submit a Pull Request
+**Q: 为什么不直接锁死应用？**
+
+A: 强制戒断容易引发逆反心理。SlowDown 的目标是帮你建立觉察，而不是和你作对。当你能意识到自己在做什么，自然会做出更好的选择。
+
+**Q: 等待时间可以调整吗？**
+
+A: 可以，在设置中调整默认倒计时秒数。
+
+**Q: 会影响手机性能吗？**
+
+A: 不会。SlowDown 采用被动监听方式，只在你打开应用时才工作，不会持续占用资源。
+
+**Q: 我的数据安全吗？**
+
+A: 所有数据都存储在你的手机本地，不会上传到任何服务器。卸载应用后数据会被删除。
 
 ---
 
-## 📄 License
+## 开源协议
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+本项目基于 MIT 协议开源。
 
 ---
 
 <div align="center">
-  <sub>Built with 💚 for digital wellness</sub>
+  <sub>少刷一点，多活一点</sub>
 </div>

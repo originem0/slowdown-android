@@ -16,6 +16,11 @@ data class AppStat(
     val count: Int
 )
 
+data class SuccessRateStat(
+    val total: Int,
+    val successful: Int
+)
+
 @Dao
 interface InterventionDao {
 
@@ -31,6 +36,15 @@ interface InterventionDao {
         AND userChoice != 'continued'
     """)
     fun getSavedMinutesSince(startTime: Long): Flow<Int>
+
+    @Query("""
+        SELECT
+            COUNT(*) as total,
+            SUM(CASE WHEN userChoice != 'continued' THEN 1 ELSE 0 END) as successful
+        FROM intervention_records
+        WHERE timestamp >= :startTime
+    """)
+    fun getSuccessRateSince(startTime: Long): Flow<SuccessRateStat>
 
     @Query("""
         SELECT date(timestamp/1000, 'unixepoch', 'localtime') as day, COUNT(*) as count

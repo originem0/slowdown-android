@@ -258,22 +258,33 @@ private fun MonitoredAppItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            // Mode Badge (Subtitle position for importance)
+            // Mode Badge with tap hint
             val modeText = when {
                 monitoredApp?.isEnabled != true -> stringResource(R.string.tracking_only)
                 monitoredApp.limitMode == "strict" -> stringResource(R.string.strict_mode)
                 else -> stringResource(R.string.gentle_mode)
             }
-             Text(
-                text = modeText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = modeText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
         
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Remove Button
+        // Remove Button - 使用更明显的颜色
         IconButton(
             onClick = onRemove,
             modifier = Modifier.size(32.dp)
@@ -281,7 +292,7 @@ private fun MonitoredAppItem(
             Icon(
                 Icons.Default.Close,
                 contentDescription = "Remove",
-                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         }
