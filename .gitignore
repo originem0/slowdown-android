@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Tool configurations
+.agent/
+.shared/
+nul
