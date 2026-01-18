@@ -71,7 +71,8 @@
       "Bash(gradlew.bat :app:compileDebugKotlin:*)",
       "Bash(./gradlew.bat:*)",
       "Skill(superpowers:executing-plans)",
-      "Bash(kotlinc:*)"
+      "Bash(kotlinc:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }
