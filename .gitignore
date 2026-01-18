@@ -20,3 +20,10 @@ local.properties
 nul
 __pycache__/
 *.pyc
+
+# Release keystore
+*.keystore
+*.jks
+
+# Build scripts
+*.bat
