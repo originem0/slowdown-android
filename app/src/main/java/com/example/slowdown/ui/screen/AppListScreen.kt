@@ -65,26 +65,20 @@ fun AppListScreen(
     val monitoredList = filteredApps.filter { monitoredPackages.contains(it.packageName) }
     val unmonitoredList = filteredApps.filter { !monitoredPackages.contains(it.packageName) }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        // Removed TopAppBar 
-    ) { padding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentPadding = PaddingValues(bottom = 80.dp)
+        ) {
                 // Removed Header with Back Button
                 
                 // Search Section
@@ -137,32 +131,31 @@ fun AppListScreen(
             }
         }
 
-        // Remove Dialog
-        appToRemove?.let { app ->
-            AlertDialog(
-                onDismissRequest = { appToRemove = null },
-                title = { Text(stringResource(R.string.remove_protection)) },
-                text = { Text(stringResource(R.string.remove_protection_confirm, app.appName)) },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            viewModel.toggleApp(app, true)
-                            appToRemove = null
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Text(stringResource(R.string.remove))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { appToRemove = null }) {
-                        Text(stringResource(R.string.cancel))
-                    }
+    // Remove Dialog
+    appToRemove?.let { app ->
+        AlertDialog(
+            onDismissRequest = { appToRemove = null },
+            title = { Text(stringResource(R.string.remove_protection)) },
+            text = { Text(stringResource(R.string.remove_protection_confirm, app.appName)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.toggleApp(app, true)
+                        appToRemove = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(stringResource(R.string.remove))
                 }
-            )
-        }
+            },
+            dismissButton = {
+                TextButton(onClick = { appToRemove = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 }
 

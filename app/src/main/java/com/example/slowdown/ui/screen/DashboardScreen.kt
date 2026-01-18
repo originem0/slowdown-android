@@ -103,15 +103,12 @@ fun DashboardScreen(
         )
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(bottom = 80.dp)
-        ) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(bottom = 80.dp)
+    ) {
             // Header Section - Simplified
             item {
                 StatusHeader(
@@ -205,7 +202,6 @@ fun DashboardScreen(
             }
         }
     }
-}
 
 val UserBorder @Composable get() = androidx.compose.foundation.BorderStroke(
     1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
@@ -508,15 +504,15 @@ private fun MindfulBreathingCircle(mindfulState: MindfulState) {
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
+                        animatedColor.copy(alpha = 0.55f),
                         animatedColor.copy(alpha = 0.35f),
-                        animatedColor.copy(alpha = 0.2f),
-                        animatedColor.copy(alpha = 0.08f),
+                        animatedColor.copy(alpha = 0.1f),
                         Color.Transparent
                     ),
                     center = center,
-                    radius = baseRadius * scale * 1.1f
+                    radius = baseRadius * scale * 1.35f
                 ),
-                radius = baseRadius * scale * 1.1f,
+                radius = baseRadius * scale * 1.35f,
                 center = center
             )
 
@@ -524,7 +520,7 @@ private fun MindfulBreathingCircle(mindfulState: MindfulState) {
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        surfaceColor.copy(alpha = 0.4f),
+                        surfaceColor.copy(alpha = 0.1f),
                         animatedColor.copy(alpha = 0.15f),
                         Color.Transparent
                     ),

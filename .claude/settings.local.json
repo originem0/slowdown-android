@@ -96,7 +96,13 @@
       "Bash(JAVA_HOME=\"D:\\\\Scoop\\\\apps\\\\temurin21-jdk\\\\current\" ./gradlew assembleDebug:*)",
       "Bash(JAVA_HOME=\"D:/Scoop/apps/temurin21-jdk/current\" ./gradlew compileDebugKotlin)",
       "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew:*)",
-      "Bash(taskkill /F /PID 25536 /PID 28768)"
+      "Bash(taskkill /F /PID 25536 /PID 28768)",
+      "Bash(xxd:*)",
+      "Bash(ls:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git push:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge v2-performance -m \"$\\(cat <<''EOF''\nMerge v2-performance: major UI/UX improvements\n\nFeatures:\n- Dashboard redesign with success rate metric\n- Onboarding flow optimization\n- Permission system reorganization \\(required/recommended\\)\n- Short video mode for TikTok/Bilibili\n- Usage time sync on permission grant\n- Android backup support\n\nBug fixes:\n- Restriction mode display fix\n- Samsung One UI compatibility\n- MIUI background popup detection\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
