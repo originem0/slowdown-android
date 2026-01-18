@@ -80,6 +80,15 @@ SlowDown 是一款帮助你减少手机沉迷的 Android 应用。
 - 支持 Android 系统备份
 - 简洁美观的界面设计
 
+### 截图
+
+<div align="center">
+  <img src="docs/images/screen_01.jpg" width="24%" />
+  <img src="docs/images/screen_02.jpg" width="24%" />
+  <img src="docs/images/screen_03.jpg" width="24%" />
+  <img src="docs/images/screen_04.jpg" width="24%" />
+</div>
+
 ---
 
 ## 如何使用
