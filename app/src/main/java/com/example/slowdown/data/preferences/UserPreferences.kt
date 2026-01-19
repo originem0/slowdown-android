@@ -25,6 +25,7 @@ class UserPreferences(private val context: Context) {
         val MIUI_LOCK_APP_CONFIRMED = booleanPreferencesKey("miui_lock_app_confirmed")
         val APP_LANGUAGE = stringPreferencesKey("app_language")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        val CUSTOM_REMINDER_TEXTS = stringPreferencesKey("custom_reminder_texts")
     }
 
     val serviceEnabled: Flow<Boolean> = context.dataStore.data
@@ -105,6 +106,16 @@ class UserPreferences(private val context: Context) {
     suspend fun setOnboardingCompleted(completed: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[ONBOARDING_COMPLETED] = completed
+        }
+    }
+
+    // 自定义提醒文案（换行分隔多句）
+    val customReminderTexts: Flow<String> = context.dataStore.data
+        .map { preferences -> preferences[CUSTOM_REMINDER_TEXTS] ?: "" }
+
+    suspend fun setCustomReminderTexts(texts: String) {
+        context.dataStore.edit { preferences ->
+            preferences[CUSTOM_REMINDER_TEXTS] = texts
         }
     }
 }

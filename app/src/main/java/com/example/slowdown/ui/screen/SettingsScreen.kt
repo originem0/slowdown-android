@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Warning
@@ -14,7 +16,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -35,6 +39,7 @@ fun SettingsScreen(
     val cooldownMinutes by viewModel.cooldownMinutes.collectAsState()
     val permissionState by viewModel.permissionState.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
+    val customReminderTexts by viewModel.customReminderTexts.collectAsState()
 
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -201,6 +206,13 @@ fun SettingsScreen(
                 valueRange = 1f..30f,
                 unit = stringResource(R.string.minutes),
                 onValueChange = { viewModel.setCooldownMinutes(it) }
+            )
+        }
+
+        item {
+            CustomReminderTextItem(
+                value = customReminderTexts,
+                onValueChange = { viewModel.setCustomReminderTexts(it) }
             )
             ListDivider(startIndent = 0.dp)
         }
@@ -665,6 +677,183 @@ private fun LanguageSettingItem(
             }
         )
     }
+}
+
+@Composable
+private fun CustomReminderTextItem(
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    // 编辑模式状态
+    var isEditing by remember { mutableStateOf(false) }
+    // 本地编辑文本
+    var localText by remember { mutableStateOf(value) }
+
+    // 当外部值变化时同步到本地（例如初始加载）
+    LaunchedEffect(value) {
+        if (!isEditing && localText != value) {
+            localText = value
+        }
+    }
+
+    // 计算当前句数（基于已保存的值）
+    val savedLines = value.split("\n").filter { it.isNotBlank() }
+    val savedLineCount = savedLines.size.coerceAtMost(10)
+
+    // 编辑中的句数
+    val editingLines = localText.split("\n").filter { it.isNotBlank() }
+    val editingLineCount = editingLines.size.coerceAtMost(10)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.custom_reminder_title),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = stringResource(R.string.custom_reminder_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // 编辑/确认按钮
+            if (isEditing) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "$editingLineCount/10",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    FilledTonalButton(
+                        onClick = {
+                            onValueChange(localText)
+                            isEditing = false
+                        },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.confirm),
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (savedLineCount > 0) {
+                        Text(
+                            text = "$savedLineCount/10",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    TextButton(
+                        onClick = {
+                            localText = value  // 重置为已保存的值
+                            isEditing = true
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.custom_reminder_edit),
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (isEditing) {
+            // 编辑模式：显示输入框
+            OutlinedTextField(
+                value = localText,
+                onValueChange = { newValue ->
+                    // 限制最多 10 句
+                    val newLines = newValue.split("\n").filter { it.isNotBlank() }
+                    if (newLines.size <= 10) {
+                        localText = newValue
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 100.dp, max = 200.dp),
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.custom_reminder_placeholder),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                },
+                textStyle = MaterialTheme.typography.bodyMedium,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default)
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = stringResource(R.string.custom_reminder_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+        } else {
+            // 展示模式：显示已保存的句子列表
+            if (savedLines.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.custom_reminder_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            RoundedCornerShape(12.dp)
+                        )
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    savedLines.forEachIndexed { index, line ->
+                        Row(verticalAlignment = Alignment.Top) {
+                            Text(
+                                text = "${index + 1}.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.width(24.dp)
+                            )
+                            Text(
+                                text = line,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    ListDivider(startIndent = 16.dp)
 }
 
 

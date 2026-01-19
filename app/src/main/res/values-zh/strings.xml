@@ -59,6 +59,12 @@
     <string name="cooldown_time">冷却时间</string>
     <string name="cooldown_subtitle">两次干预之间的最短间隔</string>
     <string name="minutes">分钟</string>
+    <string name="custom_reminder_title">自定义提醒语</string>
+    <string name="custom_reminder_subtitle">在弹窗中显示你自己的话</string>
+    <string name="custom_reminder_placeholder">例如：\n真的需要现在刷吗？\n先喝杯水吧\n你原本想做什么来着？</string>
+    <string name="custom_reminder_hint">每行一句，最多 10 句，弹窗时随机显示一句</string>
+    <string name="custom_reminder_edit">编辑</string>
+    <string name="custom_reminder_empty">未设置自定义提醒语</string>
 
     <!-- Language -->
     <string name="language_section">语言 / Language</string>
@@ -117,7 +123,7 @@
     <string name="tracking_only_title">仅统计</string>
     <string name="tracking_only_desc">只记录使用时间，不做任何干预</string>
     <string name="gentle_reminder_title">温和提醒</string>
-    <string name="gentle_reminder_desc">达到限额后提醒，但可继续使用</string>
+    <string name="gentle_reminder_desc">显示深呼吸提醒，可继续使用</string>
     <string name="gentle_reminder_with_limit">每日 %d 分钟后提醒，可继续使用</string>
     <string name="gentle_reminder_every_open">每次打开应用时深呼吸提醒</string>
     <string name="strict_limit_title">严格限制</string>
@@ -193,11 +199,16 @@
     <string name="onboarding_skip_for_now">跳过，稍后设置</string>
 
     <string name="onboarding_complete_title">准备就绪</string>
-    <string name="onboarding_complete_subtitle">下次打开这些应用时，你会有 10 秒的思考时间</string>
+    <string name="onboarding_complete_subtitle">还差最后一步就能开始守护</string>
     <string name="onboarding_apps_monitored">监控应用</string>
     <string name="onboarding_default_mode">默认模式</string>
     <string name="onboarding_gentle_mode_short">温和</string>
     <string name="onboarding_start_journey">开始</string>
+    <string name="onboarding_next_steps">接下来</string>
+    <string name="onboarding_tip_enable_protection">在首页开启「守护中」开关</string>
+    <string name="onboarding_tip_enable_protection_desc">开关开启后才会生效</string>
+    <string name="onboarding_tip_customize_apps">点击应用卡片进入详细设置</string>
+    <string name="onboarding_tip_customize_apps_desc">可设置每日限额、限制模式等</string>
 
     <!-- Overlay Activity (Deep Breathing) -->
     <string name="overlay_take_a_break">休息一下</string>

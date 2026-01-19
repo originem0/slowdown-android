@@ -37,7 +37,7 @@ enum class MindfulState {
  */
 data class AwarenessMoment(
     val id: Long,
-    val timeOfDayResId: Int,      // 时间段资源 ID (R.string.time_morning 等)
+    val timeString: String,        // 时间戳字符串 (如 "18:12")
     val messageResId: Int,         // 觉知文案资源 ID
     val messageArgs: Array<Any>,   // 格式化参数（如 appName）
     val appName: String,           // 涉及的应用名
@@ -92,7 +92,7 @@ class DashboardViewModel(
         records.take(3).map { record ->
             AwarenessMoment(
                 id = record.id,
-                timeOfDayResId = getTimeOfDayResId(record.timestamp),
+                timeString = formatTimestamp(record.timestamp),
                 messageResId = getAwarenessMessageResId(record),
                 messageArgs = arrayOf(record.appName),
                 appName = record.appName,
@@ -136,18 +136,15 @@ class DashboardViewModel(
     }
 
     /**
-     * 根据时间戳返回时间段资源 ID
+     * 格式化时间戳为 "HH:mm" 格式
      */
-    private fun getTimeOfDayResId(timestamp: Long): Int {
+    private fun formatTimestamp(timestamp: Long): String {
         val calendar = java.util.Calendar.getInstance().apply {
             timeInMillis = timestamp
         }
         val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
-        return when {
-            hour < 12 -> R.string.time_morning
-            hour < 18 -> R.string.time_afternoon
-            else -> R.string.time_evening
-        }
+        val minute = calendar.get(java.util.Calendar.MINUTE)
+        return String.format("%02d:%02d", hour, minute)
     }
 
     /**

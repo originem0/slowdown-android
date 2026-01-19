@@ -59,6 +59,12 @@
     <string name="cooldown_time">Cooldown Time</string>
     <string name="cooldown_subtitle">Minimum interval between interventions</string>
     <string name="minutes">minutes</string>
+    <string name="custom_reminder_title">Custom Reminders</string>
+    <string name="custom_reminder_subtitle">Show your own message in popup</string>
+    <string name="custom_reminder_placeholder">e.g.\nDo you really need to scroll now?\nTake a deep breath first\nWhat were you planning to do?</string>
+    <string name="custom_reminder_hint">One sentence per line, up to 10. Random display in popup.</string>
+    <string name="custom_reminder_edit">Edit</string>
+    <string name="custom_reminder_empty">No custom reminders set</string>
 
     <!-- Language -->
     <string name="language_section">Language / 语言</string>
@@ -117,7 +123,7 @@
     <string name="tracking_only_title">Tracking Only</string>
     <string name="tracking_only_desc">Only record usage time, no intervention</string>
     <string name="gentle_reminder_title">Gentle Reminder</string>
-    <string name="gentle_reminder_desc">Remind when limit reached, can continue using</string>
+    <string name="gentle_reminder_desc">Shows deep breath reminder, can continue</string>
     <string name="gentle_reminder_with_limit">Remind after %d minutes daily, can continue</string>
     <string name="gentle_reminder_every_open">Deep breathing reminder on each open</string>
     <string name="strict_limit_title">Strict Limit</string>
@@ -193,11 +199,16 @@
     <string name="onboarding_skip_for_now">Skip, set up later</string>
 
     <string name="onboarding_complete_title">Ready to Go</string>
-    <string name="onboarding_complete_subtitle">Next time you open these apps, you\'ll have 10 seconds to think</string>
+    <string name="onboarding_complete_subtitle">One last step to start protection</string>
     <string name="onboarding_apps_monitored">Apps Monitored</string>
     <string name="onboarding_default_mode">Default Mode</string>
     <string name="onboarding_gentle_mode_short">Gentle</string>
     <string name="onboarding_start_journey">Start</string>
+    <string name="onboarding_next_steps">Next Steps</string>
+    <string name="onboarding_tip_enable_protection">Turn on \"Protection Active\" on Dashboard</string>
+    <string name="onboarding_tip_enable_protection_desc">Protection takes effect when enabled</string>
+    <string name="onboarding_tip_customize_apps">Tap app cards to customize settings</string>
+    <string name="onboarding_tip_customize_apps_desc">Set daily limits, restriction modes, etc.</string>
 
     <!-- Overlay Activity (Deep Breathing) -->
     <string name="overlay_take_a_break">Take a break</string>

@@ -21,6 +21,9 @@ class SettingsViewModel(
     val cooldownMinutes: StateFlow<Int> = repository.cooldownMinutes
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 5)
 
+    val customReminderTexts: StateFlow<String> = repository.customReminderTexts
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
     private val miuiAutoStartConfirmed: StateFlow<Boolean> = repository.miuiAutoStartConfirmed
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
@@ -103,6 +106,12 @@ class SettingsViewModel(
     fun setCooldownMinutes(minutes: Int) {
         viewModelScope.launch {
             repository.setCooldownMinutes(minutes)
+        }
+    }
+
+    fun setCustomReminderTexts(texts: String) {
+        viewModelScope.launch {
+            repository.setCustomReminderTexts(texts)
         }
     }
 

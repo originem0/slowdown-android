@@ -567,9 +567,9 @@ private fun AwarenessMomentsCard(
                     modifier = Modifier.padding(end = 8.dp)
                 )
 
-                // Time badge - 使用资源 ID 动态获取字符串
+                // Time badge - 直接显示时间戳
                 Text(
-                    text = stringResource(moment.timeOfDayResId),
+                    text = moment.timeString,
                     style = MaterialTheme.typography.labelSmall,
                     color = timeColor,
                     fontWeight = FontWeight.Medium

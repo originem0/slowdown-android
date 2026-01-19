@@ -811,15 +811,14 @@ private fun CompleteStep(
         modifier = Modifier
             .fillMaxSize()
             .padding(DS.Spacing.screenHorizontal),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.weight(0.2f))
+        Spacer(modifier = Modifier.weight(0.1f))
 
         // Success Icon
         Box(
             modifier = Modifier
-                .size(120.dp)
+                .size(100.dp)
                 .scale(scale),
             contentAlignment = Alignment.Center
         ) {
@@ -841,34 +840,33 @@ private fun CompleteStep(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(56.dp)
+                    modifier = Modifier.size(48.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(DS.Spacing.xxl))
+        Spacer(modifier = Modifier.height(DS.Spacing.lg))
 
         // Title
         Text(
             text = stringResource(R.string.onboarding_complete_title),
-            style = MaterialTheme.typography.headlineLarge,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        Spacer(modifier = Modifier.height(DS.Spacing.md))
+        Spacer(modifier = Modifier.height(DS.Spacing.sm))
 
         // Subtitle
         Text(
             text = stringResource(R.string.onboarding_complete_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = DS.Spacing.lg)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(modifier = Modifier.height(DS.Spacing.xl))
+        Spacer(modifier = Modifier.height(DS.Spacing.lg))
 
         // Summary Card
         Card(
@@ -879,7 +877,7 @@ private fun CompleteStep(
             )
         ) {
             Column(
-                modifier = Modifier.padding(DS.Spacing.lg),
+                modifier = Modifier.padding(DS.Spacing.md),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
@@ -897,7 +895,38 @@ private fun CompleteStep(
             }
         }
 
-        Spacer(modifier = Modifier.weight(0.3f))
+        Spacer(modifier = Modifier.height(DS.Spacing.xl))
+
+        // Next Steps Section
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(DS.Spacing.sm)
+        ) {
+            Text(
+                text = stringResource(R.string.onboarding_next_steps),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            // Tip 1: Enable protection
+            NextStepItem(
+                icon = Icons.Outlined.Shield,
+                title = stringResource(R.string.onboarding_tip_enable_protection),
+                description = stringResource(R.string.onboarding_tip_enable_protection_desc),
+                accentColor = MaterialTheme.colorScheme.primary
+            )
+
+            // Tip 2: Customize apps
+            NextStepItem(
+                icon = Icons.Outlined.Settings,
+                title = stringResource(R.string.onboarding_tip_customize_apps),
+                description = stringResource(R.string.onboarding_tip_customize_apps_desc),
+                accentColor = MaterialTheme.colorScheme.secondary
+            )
+        }
+
+        Spacer(modifier = Modifier.weight(0.15f))
 
         // CTA Button
         Button(
@@ -917,7 +946,53 @@ private fun CompleteStep(
             )
         }
 
-        Spacer(modifier = Modifier.height(DS.Spacing.xxl))
+        Spacer(modifier = Modifier.height(DS.Spacing.xl))
+    }
+}
+
+@Composable
+private fun NextStepItem(
+    icon: ImageVector,
+    title: String,
+    description: String,
+    accentColor: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(DS.Radius.md))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(DS.Spacing.md),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(DS.Size.avatarSm)
+                .clip(CircleShape)
+                .background(accentColor.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(DS.Size.iconSm)
+            )
+        }
+        Spacer(modifier = Modifier.width(DS.Spacing.md))
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
