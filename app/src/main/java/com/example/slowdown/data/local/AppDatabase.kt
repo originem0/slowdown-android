@@ -82,6 +82,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "slowdown_database"
                 )
                     .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)  // 降级时重建数据库，避免崩溃
                     .build()
                 INSTANCE = instance
                 instance

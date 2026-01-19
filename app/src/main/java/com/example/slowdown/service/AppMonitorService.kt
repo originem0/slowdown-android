@@ -26,6 +26,11 @@ class AppMonitorService : AccessibilityService() {
     companion object {
         private const val TAG = "SlowDown"
         private const val VIDEO_APP_CHECK_INTERVAL_MS = 30_000L  // 视频应用检查间隔：30秒
+        private const val MAP_CLEANUP_INTERVAL_MS = 60 * 60 * 1000L  // Map 清理间隔：1小时
+        private const val MAP_ENTRY_MAX_AGE_MS = 24 * 60 * 60 * 1000L  // Map 条目最大存活时间：24小时
+        private const val DEBOUNCE_INTERVAL_MS = 500L  // 防抖动间隔：500ms
+        private const val MOVE_TO_FRONT_RETRY_DELAY_MS = 100L  // moveTaskToFront 重试延迟
+        private const val MOVE_TO_FRONT_MAX_ATTEMPTS = 3  // moveTaskToFront 最大尝试次数
     }
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -174,6 +179,9 @@ class AppMonitorService : AccessibilityService() {
 
         // 启动前台服务通知 - 防止 MIUI 冻结 AccessibilityService
         startForegroundNotification()
+
+        // 启动定期清理 Map 的任务，防止内存泄漏
+        startMapCleanupTask()
     }
 
     /**
@@ -200,6 +208,45 @@ class AppMonitorService : AccessibilityService() {
             Log.d(TAG, "[Service] Foreground notification started - service should not be frozen now")
         } catch (e: Exception) {
             Log.e(TAG, "[Service] Failed to start foreground notification: ${e.message}")
+        }
+    }
+
+    /**
+     * 启动定期清理 Map 的任务
+     * 防止 cooldownMap 和 lastCheckTime 无限增长导致内存泄漏
+     */
+    private fun startMapCleanupTask() {
+        serviceScope.launch {
+            while (true) {
+                delay(MAP_CLEANUP_INTERVAL_MS)
+                cleanupStaleMaps()
+            }
+        }
+    }
+
+    /**
+     * 清理过期的 Map 条目
+     * 删除超过 24 小时未更新的条目
+     */
+    private fun cleanupStaleMaps() {
+        val now = System.currentTimeMillis()
+        var cleanedCooldown = 0
+        var cleanedLastCheck = 0
+
+        cooldownMap.entries.removeIf { entry ->
+            val shouldRemove = now - entry.value > MAP_ENTRY_MAX_AGE_MS
+            if (shouldRemove) cleanedCooldown++
+            shouldRemove
+        }
+
+        lastCheckTime.entries.removeIf { entry ->
+            val shouldRemove = now - entry.value > MAP_ENTRY_MAX_AGE_MS
+            if (shouldRemove) cleanedLastCheck++
+            shouldRemove
+        }
+
+        if (cleanedCooldown > 0 || cleanedLastCheck > 0) {
+            Log.d(TAG, "[MapCleanup] Cleaned $cleanedCooldown cooldown entries, $cleanedLastCheck lastCheck entries")
         }
     }
 
@@ -336,10 +383,10 @@ class AppMonitorService : AccessibilityService() {
     private suspend fun checkAndShowUsageWarning(packageName: String) {
         if (!::usageTrackingManager.isInitialized) return
 
-        // 防抖动：500ms 内不重复检查同一应用
+        // 防抖动：DEBOUNCE_INTERVAL_MS 内不重复检查同一应用
         val now = System.currentTimeMillis()
         val lastCheck = lastCheckTime[packageName] ?: 0
-        if (now - lastCheck < 500) {
+        if (now - lastCheck < DEBOUNCE_INTERVAL_MS) {
             Log.d(TAG, "[Debounce] Skip duplicate check for $packageName (${now - lastCheck}ms ago)")
             return
         }
@@ -718,16 +765,11 @@ class AppMonitorService : AccessibilityService() {
             Log.d(TAG, "[Service] OverlayActivity launched")
 
             // 关键：使用 moveTaskToFront 强制将任务移到前台
-            val handler = Handler(Looper.getMainLooper())
-
-            // 立即尝试移到前台
-            handler.post { moveSlowDownToFront() }
-
-            // 100ms 后再次尝试（确保 Activity 已创建）
-            handler.postDelayed({ moveSlowDownToFront() }, 100)
-
-            // 300ms 后再次尝试（最后保障）
-            handler.postDelayed({ moveSlowDownToFront() }, 300)
+            // 立即尝试一次，然后延迟重试确保 Activity 已创建
+            moveSlowDownToFrontWithRetry(
+                maxAttempts = MOVE_TO_FRONT_MAX_ATTEMPTS,
+                delayMs = MOVE_TO_FRONT_RETRY_DELAY_MS
+            )
 
         } catch (e: Exception) {
             Log.e(TAG, "[Service] Direct launch failed: ${e.message}, falling back to notification")
@@ -743,9 +785,33 @@ class AppMonitorService : AccessibilityService() {
     }
 
     /**
-     * 使用 ActivityManager.moveTaskToFront() 将 SlowDown 任务移到前台
+     * 使用 ActivityManager.moveTaskToFront() 将 SlowDown 任务移到前台（带重试）
+     * @param maxAttempts 最大尝试次数
+     * @param delayMs 每次重试的延迟时间
      */
-    private fun moveSlowDownToFront() {
+    private fun moveSlowDownToFrontWithRetry(maxAttempts: Int, delayMs: Long, attempt: Int = 1) {
+        if (attempt > maxAttempts) {
+            Log.d(TAG, "[Service] moveTaskToFront: max attempts ($maxAttempts) reached")
+            return
+        }
+
+        val success = moveSlowDownToFront()
+        if (success) {
+            Log.d(TAG, "[Service] moveTaskToFront succeeded on attempt $attempt")
+            return
+        }
+
+        // 失败则延迟重试
+        Handler(Looper.getMainLooper()).postDelayed({
+            moveSlowDownToFrontWithRetry(maxAttempts, delayMs, attempt + 1)
+        }, delayMs)
+    }
+
+    /**
+     * 使用 ActivityManager.moveTaskToFront() 将 SlowDown 任务移到前台
+     * @return 是否成功找到并移动任务
+     */
+    private fun moveSlowDownToFront(): Boolean {
         try {
             val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
 
@@ -761,13 +827,15 @@ class AppMonitorService : AccessibilityService() {
 
                     @Suppress("DEPRECATION")
                     activityManager.moveTaskToFront(task.id, ActivityManager.MOVE_TASK_WITH_HOME)
-                    return
+                    return true
                 }
             }
 
             Log.d(TAG, "[Service] SlowDown task not found in running tasks")
+            return false
         } catch (e: Exception) {
             Log.e(TAG, "[Service] moveTaskToFront failed: ${e.message}")
+            return false
         }
     }
 

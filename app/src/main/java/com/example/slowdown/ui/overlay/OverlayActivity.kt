@@ -47,6 +47,7 @@ class OverlayActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "SlowDown"
+        private const val REMINDER_LOAD_TIMEOUT_MS = 500L  // 自定义提醒语加载超时
         const val EXTRA_PACKAGE_NAME = "package_name"
         const val EXTRA_APP_NAME = "app_name"
         const val EXTRA_COUNTDOWN_SECONDS = "countdown_seconds"
@@ -113,7 +114,7 @@ class OverlayActivity : ComponentActivity() {
             var customReminderText by remember { mutableStateOf<String?>(null) }
 
             LaunchedEffect(Unit) {
-                customReminderText = withTimeoutOrNull(500L) {
+                customReminderText = withTimeoutOrNull(REMINDER_LOAD_TIMEOUT_MS) {
                     val texts = (application as SlowDownApp).userPreferences.customReminderTexts.first()
                     val lines = texts.split("\n").filter { it.isNotBlank() }.take(10)
                     lines.randomOrNull()

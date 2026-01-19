@@ -32,6 +32,8 @@ class SlowDownApp : Application() {
     }
 
     // 缓存语言设置，避免 Activity 启动时阻塞 I/O
+    // 使用 @Volatile 确保多线程可见性
+    @Volatile
     var cachedLanguage: String = "en"
         private set
 
