@@ -27,3 +27,7 @@ __pycache__/
 
 # Build scripts
 *.bat
+
+# Temporary documentation (session logs, scratch files)
+docs/Claude Code.txt
+docs/⠐ *.txt
