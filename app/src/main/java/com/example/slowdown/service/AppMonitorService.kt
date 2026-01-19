@@ -30,6 +30,7 @@ class AppMonitorService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val cooldownMap = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val lastCheckTime = java.util.concurrent.ConcurrentHashMap<String, Long>()  // 防抖动：记录最后检查时间
 
     // 使用时间追踪
     private lateinit var usageTrackingManager: UsageTrackingManager
@@ -92,7 +93,7 @@ class AppMonitorService : AccessibilityService() {
                         checkAndShowUsageWarning(targetApp)
                     } else {
                         // 无时间限制：检查 cooldown 并触发深呼吸
-                        val cooldownMinutes = repository.cooldownMinutes.first()
+                        val cooldownMinutes = getEffectiveCooldownMinutes(targetApp)
                         val lastIntervention = cooldownMap[targetApp] ?: 0
                         val cooldownMs = cooldownMinutes * 60 * 1000L
                         val elapsed = System.currentTimeMillis() - lastIntervention
@@ -152,10 +153,10 @@ class AppMonitorService : AccessibilityService() {
                 // 1. 全屏视频播放时（SurfaceView/TextureView）常见
                 // 2. 浏览器渲染 WebView 时也可能发生
                 // 3. 某些应用的特殊 UI 状态
-                // 此时用户可能仍在被监控应用中，应该继续检查
+                // 此时用户可能仍在被监控应用中，直接继续检查
                 if (actualForeground == currentFg || actualForeground == null) {
                     if (actualForeground == null) {
-                        Log.d(TAG, "[Service] Sync completed, foreground is null (fullscreen/webview?), proceeding with check anyway for: $currentFg")
+                        Log.d(TAG, "[Service] Sync completed, foreground is null, proceeding with check for: $currentFg")
                     } else {
                         Log.d(TAG, "[Service] Sync completed, checking warnings for current foreground: $currentFg")
                     }
@@ -335,6 +336,15 @@ class AppMonitorService : AccessibilityService() {
     private suspend fun checkAndShowUsageWarning(packageName: String) {
         if (!::usageTrackingManager.isInitialized) return
 
+        // 防抖动：500ms 内不重复检查同一应用
+        val now = System.currentTimeMillis()
+        val lastCheck = lastCheckTime[packageName] ?: 0
+        if (now - lastCheck < 500) {
+            Log.d(TAG, "[Debounce] Skip duplicate check for $packageName (${now - lastCheck}ms ago)")
+            return
+        }
+        lastCheckTime[packageName] = now
+
         // 每天重置已显示警告的记录
         val todayDate = java.time.LocalDate.now().toString()
         if (todayDate != lastResetDate) {
@@ -411,10 +421,23 @@ class AppMonitorService : AccessibilityService() {
     }
 
     /**
+     * 获取应用的有效冷却时间（分钟）
+     * 优先使用应用单独设置，否则使用全局设置
+     */
+    private suspend fun getEffectiveCooldownMinutes(packageName: String): Int {
+        val monitoredApp = repository.getMonitoredApp(packageName)
+        val appCooldown = monitoredApp?.cooldownMinutes
+        val globalCooldown = repository.cooldownMinutes.first()
+
+        // 应用设置优先，否则用全局；最小值保护 1 分钟
+        return maxOf(appCooldown ?: globalCooldown, 1)
+    }
+
+    /**
      * 检查深呼吸弹窗的冷却时间
      */
     private suspend fun checkCooldown(packageName: String): Boolean {
-        val cooldownMinutes = repository.cooldownMinutes.first()
+        val cooldownMinutes = getEffectiveCooldownMinutes(packageName)
         val lastTime = cooldownMap[packageName] ?: 0
         val cooldownMs = cooldownMinutes * 60 * 1000L
         val elapsed = System.currentTimeMillis() - lastTime
@@ -584,8 +607,8 @@ class AppMonitorService : AccessibilityService() {
         // 无时间限制 + 软提醒模式：使用 cooldown 机制，每次打开触发深呼吸
         Log.d(TAG, "[Service] $packageName has no time limit + soft mode, checking cooldown for deep breath popup")
 
-        // Check cooldown
-        val cooldownMinutes = repository.cooldownMinutes.first()
+        // Check cooldown（使用应用单独设置或全局设置）
+        val cooldownMinutes = getEffectiveCooldownMinutes(packageName)
         val lastIntervention = cooldownMap[packageName] ?: 0
         val cooldownMs = cooldownMinutes * 60 * 1000L
         val elapsed = System.currentTimeMillis() - lastIntervention
@@ -630,9 +653,15 @@ class AppMonitorService : AccessibilityService() {
         }
 
         // 如果当前前台不是目标应用，跳过弹窗
+        // 注意：actualForeground == null 时允许继续（与 launchUsageWarningActivity 保持一致）
+        // 因为 rootInActiveWindow 在某些情况下会返回 null，但用户可能仍在目标应用中
         if (actualForeground != null && actualForeground != packageName) {
             Log.d(TAG, "[Service] launchDeepBreathOverlay: actual foreground ($actualForeground) != target ($packageName), skip")
             return
+        }
+
+        if (actualForeground == null) {
+            Log.d(TAG, "[Service] launchDeepBreathOverlay: foreground is null, proceeding anyway (may be fullscreen mode)")
         }
 
         // MIUI 特定策略：先尝试直接启动 Activity（配合 moveTaskToFront）

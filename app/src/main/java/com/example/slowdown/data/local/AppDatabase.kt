@@ -15,7 +15,7 @@ import com.example.slowdown.data.local.entity.UsageRecord
 
 @Database(
     entities = [InterventionRecord::class, MonitoredApp::class, UsageRecord::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -64,6 +64,16 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // 从版本3迁移到版本4：添加 cooldownMinutes 字段（单独冷却时间）
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // 添加 cooldownMinutes 字段到 monitored_apps，null = 使用全局设置
+                database.execSQL("""
+                    ALTER TABLE monitored_apps ADD COLUMN cooldownMinutes INTEGER DEFAULT NULL
+                """.trimIndent())
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -71,7 +81,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "slowdown_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                 INSTANCE = instance
                 instance

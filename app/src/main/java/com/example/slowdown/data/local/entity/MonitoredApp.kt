@@ -14,5 +14,6 @@ data class MonitoredApp(
     val isEnabled: Boolean = true,
     val dailyLimitMinutes: Int? = null,  // 每日限额（分钟），null = 无限制
     val limitMode: String = "soft",       // "soft" = 软提醒, "strict" = 强制关闭
-    val isVideoApp: Boolean = false       // 是否为短视频应用（启用主动触发模式）
+    val isVideoApp: Boolean = false,      // 是否为短视频应用（启用主动触发模式）
+    val cooldownMinutes: Int? = null      // 单独冷却时间（分钟），null = 使用全局设置
 )

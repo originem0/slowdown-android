@@ -130,6 +130,9 @@
     <string name="video_mode_desc">For TikTok, YouTube Shorts, etc.</string>
     <string name="redirect_app">Redirect App</string>
     <string name="redirect_app_desc">Open specified app during intervention</string>
+    <string name="cooldown_time_desc">Time between popup reminders</string>
+    <string name="use_global_cooldown">Use global setting (%d min)</string>
+    <string name="custom_cooldown">Custom cooldown</string>
     <string name="none">None</string>
     <string name="set_daily_limit">Set Daily Limit</string>
     <string name="no_limit">No Limit</string>

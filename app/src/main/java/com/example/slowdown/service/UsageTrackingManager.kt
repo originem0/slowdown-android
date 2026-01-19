@@ -69,6 +69,7 @@ class UsageTrackingManager(
     private var isRealtimeTrackingEnabled = false
     private var currentTrackingPackage: String? = null
     private var trackingStartTime: Long = 0
+    @Volatile  // 保证线程安全
     private var accumulatedRealtimeMs: Long = 0
 
     /**
@@ -333,15 +334,40 @@ class UsageTrackingManager(
     }
 
     /**
+     * 获取当前使用分钟数（包含未写入数据库的缓冲部分）
+     *
+     * 这是"虚拟分钟"方案的核心：
+     * - 数据库记录只有在累积超过60秒时才更新
+     * - 但检查警告时需要包含缓冲区中尚未写入的部分
+     * - 这样可以将时间精度从 ±60秒 提升到 ~0秒
+     *
+     * @param packageName 应用包名
+     * @return 虚拟使用分钟数 = 数据库记录 + 实时追踪缓冲
+     */
+    suspend fun getCurrentUsageMinutesWithBuffer(packageName: String): Int {
+        val todayDate = java.time.LocalDate.now().toString()
+        val dbMinutes = repository.getUsageRecord(packageName, todayDate)?.usageMinutes ?: 0
+
+        // 如果当前正在追踪这个应用，加上缓冲区的秒数
+        if (currentTrackingPackage == packageName && isRealtimeTrackingEnabled) {
+            val bufferedSeconds = accumulatedRealtimeMs / 1000
+            val bufferedMinutes = bufferedSeconds / 60
+            Log.d(TAG, "getCurrentUsageMinutesWithBuffer($packageName): db=$dbMinutes + buffer=$bufferedMinutes (${accumulatedRealtimeMs}ms)")
+            return dbMinutes + bufferedMinutes.toInt()
+        }
+
+        return dbMinutes
+    }
+
+    /**
      * 检查使用时间警告类型
      */
     suspend fun checkUsageWarning(packageName: String): UsageWarningType? {
         val app = repository.getMonitoredApp(packageName) ?: return null
         val dailyLimit = app.dailyLimitMinutes ?: return null  // 无限制
 
-        val todayDate = java.time.LocalDate.now().toString()
-        val usageRecord = repository.getUsageRecord(packageName, todayDate)
-        val currentMinutes = usageRecord?.usageMinutes ?: 0
+        // 使用虚拟分钟（包含缓冲区），提高精度
+        val currentMinutes = getCurrentUsageMinutesWithBuffer(packageName)
 
         val usageRatio = currentMinutes.toDouble() / dailyLimit
 

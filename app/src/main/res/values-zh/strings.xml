@@ -130,6 +130,9 @@
     <string name="video_mode_desc">适用于抖音、B站等刷视频应用</string>
     <string name="redirect_app">跳转应用</string>
     <string name="redirect_app_desc">干预时跳转到指定应用</string>
+    <string name="cooldown_time_desc">弹窗提醒的间隔时间</string>
+    <string name="use_global_cooldown">使用全局设置（%d 分钟）</string>
+    <string name="custom_cooldown">自定义冷却时间</string>
     <string name="none">无</string>
     <string name="set_daily_limit">设置每日限额</string>
     <string name="no_limit">无限制</string>

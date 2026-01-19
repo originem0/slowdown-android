@@ -102,7 +102,18 @@
       "Bash(git remote set-url:*)",
       "Bash(git push:*)",
       "Bash(git fetch:*)",
-      "Bash(git merge v2-performance -m \"$\\(cat <<''EOF''\nMerge v2-performance: major UI/UX improvements\n\nFeatures:\n- Dashboard redesign with success rate metric\n- Onboarding flow optimization\n- Permission system reorganization \\(required/recommended\\)\n- Short video mode for TikTok/Bilibili\n- Usage time sync on permission grant\n- Android backup support\n\nBug fixes:\n- Restriction mode display fix\n- Samsung One UI compatibility\n- MIUI background popup detection\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git merge v2-performance -m \"$\\(cat <<''EOF''\nMerge v2-performance: major UI/UX improvements\n\nFeatures:\n- Dashboard redesign with success rate metric\n- Onboarding flow optimization\n- Permission system reorganization \\(required/recommended\\)\n- Short video mode for TikTok/Bilibili\n- Usage time sync on permission grant\n- Android backup support\n\nBug fixes:\n- Restriction mode display fix\n- Samsung One UI compatibility\n- MIUI background popup detection\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(D:/devlopment/SlowDown/build_release.bat)",
+      "Bash(unzip:*)",
+      "Bash(D:/devlopment/SlowDown/create_keystore.bat)",
+      "Bash(gh release create v1.0.0 --title \"v1.0.0 正式版\" --notes \"$\\(cat <<''EOF''\n## SlowDown v1.0.0 正式版\n\n🧘 **数字正念应用** - 打开应用前深呼吸，培养觉察而非对抗\n\n### 主要功能\n\n- **深呼吸干预**：打开监控应用时显示呼吸动画，等待后可选择继续或离开\n- **使用时间限制**：支持仅统计、温和提醒、严格限制、完全禁止四种模式\n- **短视频模式**：针对抖音、B站等刷视频应用的主动检测\n- **使用统计**：拦截次数、节省时间、觉察率、本周趋势\n- **隐私保护**：所有数据本地存储，不联网、不收集隐私\n\n### 安装说明\n\n1. 下载 `slowdown-v1.0.0.apk`\n2. 在手机设置中开启「允许安装未知来源应用」\n3. 点击 APK 文件安装\n4. 按照引导开启必要权限（无障碍、悬浮窗、使用统计）\n\n### 系统要求\n\n- Android 10.0 \\(API 29\\) 及以上\n- 小米手机需额外开启「后台弹出界面」权限\n\n### 反馈\n\n遇到问题请提交 [Issue]\\(https://github.com/originem0/slowdown-android/issues\\)\nEOF\n\\)\" slowdown-v1.0.0.apk)",
+      "Bash(where gh)",
+      "mcp__ide__getDiagnostics",
+      "Bash(.gradlew assembleDebug:*)",
+      "Bash(JAVA_HOME=\"D:/Scoop/apps/temurin21-jdk/current\" D:/devlopment/SlowDown/gradlew.bat:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(gradlew.bat assembleDebug:*)",
+      "Bash(git stash:*)"
     ]
   }
 }

@@ -30,6 +30,10 @@ class AppDetailViewModel(
     val recentUsage: StateFlow<List<UsageRecord>> = repository.getRecentUsage(packageName, 7)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // 全局冷却时间（用于 UI 显示）
+    val globalCooldownMinutes: StateFlow<Int> = repository.cooldownMinutes
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 5)
+
     private val _installedApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val installedApps: StateFlow<List<AppInfo>> = _installedApps.asStateFlow()
 
@@ -90,12 +94,25 @@ class AppDetailViewModel(
      */
     fun setCompletelyBlocked() {
         viewModelScope.launch {
-            _monitoredApp.value?.let { app ->
-                val updated = app.copy(
+            val currentApp = _monitoredApp.value
+            if (currentApp != null) {
+                val updated = currentApp.copy(
+                    isEnabled = true,
                     dailyLimitMinutes = null,
                     limitMode = "strict"
                 )
                 repository.updateMonitoredApp(updated)
+            } else {
+                // 创建新的监控应用条目
+                val appInfoValue = _appInfo.value ?: return@launch
+                val newApp = MonitoredApp(
+                    packageName = packageName,
+                    appName = appInfoValue.appName,
+                    isEnabled = true,
+                    dailyLimitMinutes = null,
+                    limitMode = "strict"
+                )
+                repository.addMonitoredApp(newApp)
             }
         }
     }
@@ -123,13 +140,32 @@ class AppDetailViewModel(
      */
     fun updateRestrictionMode(isEnabled: Boolean, limitMode: String, dailyLimitMinutes: Int?) {
         viewModelScope.launch {
-            _monitoredApp.value?.let { app ->
-                val updated = app.copy(
+            android.util.Log.d("AppDetailViewModel", "[updateRestrictionMode] Called with: isEnabled=$isEnabled, limitMode=$limitMode, dailyLimitMinutes=$dailyLimitMinutes")
+
+            val currentApp = _monitoredApp.value
+            if (currentApp != null) {
+                // 更新现有应用
+                android.util.Log.d("AppDetailViewModel", "[updateRestrictionMode] Updating existing app: ${currentApp.packageName}")
+                val updated = currentApp.copy(
                     isEnabled = isEnabled,
                     limitMode = limitMode,
                     dailyLimitMinutes = dailyLimitMinutes
                 )
                 repository.updateMonitoredApp(updated)
+                android.util.Log.d("AppDetailViewModel", "[updateRestrictionMode] Update completed: ${updated.packageName}, isEnabled=${updated.isEnabled}, limitMode=${updated.limitMode}, dailyLimitMinutes=${updated.dailyLimitMinutes}")
+            } else {
+                // 创建新的监控应用条目
+                val appInfoValue = _appInfo.value ?: return@launch
+                android.util.Log.d("AppDetailViewModel", "[updateRestrictionMode] Creating new app: $packageName")
+                val newApp = MonitoredApp(
+                    packageName = packageName,
+                    appName = appInfoValue.appName,
+                    isEnabled = isEnabled,
+                    limitMode = limitMode,
+                    dailyLimitMinutes = dailyLimitMinutes
+                )
+                repository.addMonitoredApp(newApp)
+                android.util.Log.d("AppDetailViewModel", "[updateRestrictionMode] New app created: ${newApp.packageName}, isEnabled=${newApp.isEnabled}, limitMode=${newApp.limitMode}, dailyLimitMinutes=${newApp.dailyLimitMinutes}")
             }
         }
     }
@@ -142,6 +178,19 @@ class AppDetailViewModel(
         viewModelScope.launch {
             _monitoredApp.value?.let { app ->
                 val updated = app.copy(isVideoApp = isVideoApp)
+                repository.updateMonitoredApp(updated)
+            }
+        }
+    }
+
+    /**
+     * 更新应用单独冷却时间
+     * @param minutes 冷却时间（分钟），null 表示使用全局设置
+     */
+    fun updateCooldownMinutes(minutes: Int?) {
+        viewModelScope.launch {
+            _monitoredApp.value?.let { app ->
+                val updated = app.copy(cooldownMinutes = minutes)
                 repository.updateMonitoredApp(updated)
             }
         }

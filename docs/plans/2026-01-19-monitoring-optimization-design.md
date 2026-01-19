@@ -372,7 +372,7 @@ private suspend fun checkAndShowUsageWarning(packageName: String) {
 
 ---
 
-## 🎯 优化 #4: 视频应用误判优化
+## 🎯 优化 #4: 视频应用前台检测优化
 
 ### 问题描述
 
@@ -384,62 +384,34 @@ private suspend fun checkAndShowUsageWarning(packageName: String) {
 - `AppMonitorService.kt:156-161` - null 判断逻辑
 - `AppMonitorService.kt:624-636` - 弹窗前的最后验证
 
-### 解决方案：屏幕朝向辅助判断
+### 解决方案：统一 null 处理策略
 
 **核心思路**：
-全屏视频通常是横屏播放，结合屏幕朝向判断可以提高准确性。
+当 `rootInActiveWindow == null` 时，不做额外判断，直接继续执行检查。原因：
+1. **视频应用模式（`isVideoApp`）已有 30 秒定时器兜底**
+2. **用户主动标记的视频应用不会漏检**
+3. **横屏检测过于保守，会漏掉竖屏短视频场景**
+
+**~~之前考虑的方案：屏幕朝向辅助判断~~**
+> 经过实际测试，发现横屏检测弊大于利：
+> - 竖屏短视频（抖音、快手）是主要使用场景，但会被跳过
+> - 视频应用的 30 秒定时器已经足够覆盖所有情况
+> - 简化逻辑更可靠
 
 **实现步骤**：
 
-#### 步骤 1: 添加辅助判断方法
-
-```kotlin
-// AppMonitorService.kt 新增方法
-/**
- * 检测用户是否可能在看视频
- *
- * 判断依据：屏幕是否横屏
- * 横屏模式下更可能是在看全屏视频
- */
-private fun isProbablyWatchingVideo(): Boolean {
-    return try {
-        val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val rotation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            display?.rotation
-        } else {
-            @Suppress("DEPRECATION")
-            windowManager.defaultDisplay.rotation
-        }
-
-        // 横屏（左横屏或右横屏）
-        rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270
-    } catch (e: Exception) {
-        Log.e(TAG, "[VideoDetection] Failed to get screen rotation: ${e.message}")
-        false  // 获取失败时保守处理，认为不是视频
-    }
-}
-```
-
-#### 步骤 2: 修改判断逻辑
+#### 修改判断逻辑
 
 ```kotlin
 // AppMonitorService.kt:156 修改
 if (actualForeground == currentFg || actualForeground == null) {
     if (actualForeground == null) {
-        // 增强判断：结合屏幕朝向
-        if (isProbablyWatchingVideo()) {
-            Log.d(TAG, "[Service] Foreground is null + landscape mode, likely fullscreen video for: $currentFg")
-            serviceScope.launch {
-                checkAndShowUsageWarning(currentFg)
-            }
-        } else {
-            Log.d(TAG, "[Service] Foreground is null but not landscape, skip check for safety")
-        }
+        Log.d(TAG, "[Service] Sync completed, foreground is null, proceeding with check for: $currentFg")
     } else {
         Log.d(TAG, "[Service] Sync completed, checking warnings for current foreground: $currentFg")
-        serviceScope.launch {
-            checkAndShowUsageWarning(currentFg)
-        }
+    }
+    serviceScope.launch {
+        checkAndShowUsageWarning(currentFg)
     }
 } else {
     Log.d(TAG, "[Service] Sync completed but actual foreground ($actualForeground) != tracked ($currentFg), skip warning check")
@@ -457,15 +429,14 @@ private fun launchDeepBreathOverlay(...) {
         null
     }
 
+    // 只在明确检测到不同应用时才跳过
     if (actualForeground != null && actualForeground != packageName) {
         Log.d(TAG, "[Service] launchDeepBreathOverlay: actual foreground ($actualForeground) != target ($packageName), skip")
         return
     }
 
-    // 增强：null 时检查屏幕朝向
-    if (actualForeground == null && !isProbablyWatchingVideo()) {
-        Log.d(TAG, "[Service] launchDeepBreathOverlay: foreground null but not landscape, skip for safety")
-        return
+    if (actualForeground == null) {
+        Log.d(TAG, "[Service] launchDeepBreathOverlay: foreground is null, proceeding anyway (may be fullscreen mode)")
     }
 
     // ... 原有逻辑
@@ -474,30 +445,26 @@ private fun launchDeepBreathOverlay(...) {
 
 ### 优势分析
 
-✅ **提高准确性**：
-- 横屏 + null → 更可能是全屏视频
-- 竖屏 + null → 更可能是其他情况，跳过
+✅ **逻辑一致性**：
+- `launchDeepBreathOverlay` 和 `launchUsageWarningActivity` 行为一致
+- 减少边缘情况的不确定性
 
-✅ **简单实用**：
-- 不需要复杂的视图分析
-- 系统 API 调用，无额外依赖
+✅ **覆盖更全面**：
+- 竖屏短视频不会被漏检
+- 普通应用的 null 情况也能正常处理
 
-✅ **降低误判**：
-- 减少在 WebView 渲染、系统动画等场景的误触发
+✅ **代码简洁**：
+- 删除了 `isProbablyWatchingVideo()` 函数
+- 逻辑更直接，更易理解
 
 ### 风险评估
 
-⚠️ **风险 1: 并非所有视频都横屏**
-- 竖屏短视频（抖音、快手）仍然可能 null
+⚠️ **风险: 可能在非预期场景触发**
+- WebView 渲染、系统动画时可能误触发
 - **缓解措施**:
-  - 竖屏视频应用已标记 `isVideoApp=true`
-  - 有 30 秒定时器兜底，不会漏检
-
-⚠️ **风险 2: 用户可能横屏使用其他应用**
-- 游戏、阅读器等也可能横屏
-- **缓解措施**:
-  - 这些应用通常不会导致 `rootInActiveWindow == null`
-  - 只影响 null 的边缘情况
+  - 有 cooldown 机制保护（至少 1 分钟间隔）
+  - 有防抖动机制（500ms 内不重复检查）
+  - 用户体验影响有限
 
 ### 测试建议
 
@@ -505,24 +472,21 @@ private fun launchDeepBreathOverlay(...) {
    ```
    场景 1: 抖音横屏全屏视频
      - rootInActiveWindow == null
-     - isProbablyWatchingVideo() == true
      - 验证触发检查 ✅
 
    场景 2: 抖音竖屏刷视频
      - rootInActiveWindow == null（可能）
-     - isProbablyWatchingVideo() == false
-     - 验证跳过检查，但有 30 秒定时器兜底 ✅
+     - 验证触发检查 ✅（之前会被跳过）
 
    场景 3: 微信打开 WebView
      - rootInActiveWindow == null（短暂）
-     - isProbablyWatchingVideo() == false
-     - 验证跳过检查 ✅
+     - 验证有 cooldown 保护，不会频繁弹窗 ✅
    ```
 
 2. **日志监控**：
    ```
-   - 观察 [VideoDetection] 日志
-   - 统计 null + 横屏 vs null + 竖屏 的比例
+   - 观察 "foreground is null, proceeding" 日志
+   - 确认弹窗触发正常
    ```
 
 ---
@@ -551,11 +515,11 @@ private fun launchDeepBreathOverlay(...) {
 
 ✅ **正面影响**：
 1. 时间统计更精确（接近 100% 时非常重要）
-2. 减少非视频场景的误触发
+2. 竖屏短视频场景不会漏检
 3. 防止极端配置导致的疯狂弹窗
 
 ⚠️ **潜在负面**：
-1. 竖屏全屏视频可能漏检（但有定时器兜底）
+1. WebView 渲染等场景可能误触发（但有 cooldown 保护）
 2. 用户期望 cooldown=0 每次触发（但这本身就不合理）
 
 ### 风险矩阵
@@ -563,9 +527,8 @@ private fun launchDeepBreathOverlay(...) {
 | 风险 | 发生概率 | 影响程度 | 缓解措施 |
 |-----|---------|---------|---------|
 | 线程安全问题 | 低 | 高 | 代码审查 + 压力测试 |
-| 竖屏视频漏检 | 中 | 低 | 30秒定时器兜底 |
+| 非预期场景误触发 | 中 | 低 | cooldown + 防抖动机制 |
 | 防抖窗口不当 | 低 | 低 | 根据日志调整 |
-| 屏幕朝向误判 | 低 | 低 | 只影响 null 边缘情况 |
 
 ---
 
@@ -681,6 +644,7 @@ git revert <optimization-commit-hash>
 | 版本 | 日期 | 作者 | 变更说明 |
 |-----|------|------|---------|
 | 1.0 | 2026-01-19 | Claude & User | 初始版本，4项优化设计 |
+| 1.1 | 2026-01-20 | Claude & User | 移除横屏检测逻辑，改用统一 null 处理策略 |
 
 ---
 

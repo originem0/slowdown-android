@@ -65,6 +65,7 @@ fun AppDetailScreen(
     val todayUsage by viewModel.todayUsage.collectAsState()
     val recentUsage by viewModel.recentUsage.collectAsState()
     val installedApps by viewModel.installedApps.collectAsState()
+    val globalCooldownMinutes by viewModel.globalCooldownMinutes.collectAsState()
 
     val app = monitoredApp
 
@@ -184,6 +185,15 @@ fun AppDetailScreen(
                     VideoAppModeSection(
                         isVideoApp = app.isVideoApp,
                         onVideoAppModeChange = { viewModel.updateVideoAppMode(it) }
+                    )
+                }
+
+                // 冷却时间设置
+                item {
+                    CooldownSection(
+                        currentCooldown = app.cooldownMinutes,
+                        globalCooldown = globalCooldownMinutes,
+                        onCooldownChange = { viewModel.updateCooldownMinutes(it) }
                     )
                 }
 
@@ -380,7 +390,7 @@ private fun RestrictionModeSection(
     // 时间选择对话框
     if (showTimePicker && editingMode != null) {
         TimeLimitPickerDialog(
-            currentValue = currentLimit ?: 30,
+            currentValue = currentLimit,  // 传入实际值，null 表示无限制
             allowNoLimit = editingMode == RestrictionMode.SOFT_REMINDER,
             onDismiss = {
                 showTimePicker = false
@@ -467,14 +477,17 @@ private fun RestrictionModeItem(
  */
 @Composable
 private fun TimeLimitPickerDialog(
-    currentValue: Int,
+    currentValue: Int?,  // 改为可空，null 表示无限制
     allowNoLimit: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (Int?) -> Unit
 ) {
-    var selectedPreset by remember { mutableStateOf<Int?>(currentValue) }
+    // 根据当前值初始化状态
+    // 如果 currentValue 是 null（无限制）且允许无限制，则 selectedPreset 为 null
+    // 否则使用 currentValue 或默认值 30
+    var selectedPreset by remember { mutableStateOf(currentValue) }
     var showCustomInput by remember { mutableStateOf(false) }
-    var customValue by remember { mutableStateOf(currentValue.toString()) }
+    var customValue by remember { mutableStateOf((currentValue ?: 30).toString()) }
 
     val presets = listOf(
         15 to "15 分钟",
@@ -953,6 +966,133 @@ private fun VideoAppModeSection(
                 onCheckedChange = onVideoAppModeChange
             )
         }
+        ListDivider(startIndent = 0.dp)
+    }
+}
+
+/**
+ * 冷却时间设置
+ * 可选择使用全局设置或为当前应用设置单独的冷却时间
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CooldownSection(
+    currentCooldown: Int?,
+    globalCooldown: Int,
+    onCooldownChange: (Int?) -> Unit
+) {
+    // 预设的冷却时间选项（1, 3, 5, 10, 15, 20, 25, 30分钟）
+    val cooldownOptions = listOf(1, 3, 5, 10, 15, 20, 25, 30)
+
+    // 是否使用全局设置
+    val useGlobal = currentCooldown == null
+
+    // 当前选中的值（用于下拉框显示）
+    val selectedValue = currentCooldown ?: globalCooldown
+
+    // 下拉框展开状态
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        // 标题行
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.cooldown_time),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = stringResource(R.string.cooldown_time_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // 使用全局设置复选框
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    if (!useGlobal) {
+                        onCooldownChange(null)
+                    }
+                }
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = useGlobal,
+                onCheckedChange = { checked ->
+                    if (checked) {
+                        onCooldownChange(null)
+                    } else {
+                        // 切换到自定义时，使用最接近当前值的预设选项
+                        val defaultValue = cooldownOptions.minByOrNull { kotlin.math.abs(it - selectedValue) } ?: 5
+                        onCooldownChange(defaultValue)
+                    }
+                }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.use_global_cooldown, globalCooldown),
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (useGlobal) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        // 自定义下拉框
+        if (!useGlobal) {
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 12.dp)
+            ) {
+                OutlinedTextField(
+                    value = stringResource(R.string.minutes_format, selectedValue),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.custom_cooldown)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    cooldownOptions.forEach { minutes ->
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.minutes_format, minutes)) },
+                            onClick = {
+                                onCooldownChange(minutes)
+                                expanded = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
+                }
+            }
+        } else {
+            // 使用全局设置时显示占位符
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         ListDivider(startIndent = 0.dp)
     }
 }
