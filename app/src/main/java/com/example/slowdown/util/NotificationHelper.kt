@@ -17,8 +17,9 @@ import com.example.slowdown.ui.overlay.OverlayActivity
 /**
  * 通知帮助类 - 使用 Full-Screen Intent 实现类似闹钟的全屏弹窗
  *
- * 根据 MIUI 闹钟机制分析，系统闹钟使用 USE_FULL_SCREEN_INTENT 权限
- * 来实现锁屏/后台时弹出全屏界面的功能。
+ * 注意：此方法主要作为备用方案使用。
+ * 主要启动方式是直接启动 Activity（launchOverlayDirectly），
+ * 只有在直接启动失败时才会回退到 Full-Screen Intent。
  *
  * 工作原理：
  * 1. 如果设备锁屏或屏幕关闭 -> 直接启动全屏 Activity
@@ -84,8 +85,11 @@ object NotificationHelper {
     }
 
     /**
-     * 发送带有 Full-Screen Intent 的通知
-     * 这会触发类似闹钟的行为：
+     * 发送带有 Full-Screen Intent 的通知（备用方案）
+     *
+     * 此方法主要在直接启动 Activity 失败时使用。
+     *
+     * 行为：
      * - 锁屏时：直接弹出全屏界面
      * - 亮屏时：显示 heads-up 通知，点击后打开界面
      */

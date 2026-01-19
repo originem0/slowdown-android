@@ -495,10 +495,8 @@ class AppMonitorService : AccessibilityService() {
                 putExtra(UsageWarningActivity.EXTRA_REDIRECT_PACKAGE, redirectPackage)
             }
 
-            // 尝试设置 MIUI 特定标志位
-            if (PermissionHelper.isMiui()) {
-                MiuiHelper.addMiuiFlags(intent)
-            }
+            // 尝试设置 MIUI 特定标志位（自动检测 MIUI）
+            MiuiHelper.addMiuiFlags(intent)
 
             startActivity(intent)
             Log.d(TAG, "[UsageWarning] UsageWarningActivity launched for $packageName")
@@ -664,46 +662,25 @@ class AppMonitorService : AccessibilityService() {
             Log.d(TAG, "[Service] launchDeepBreathOverlay: foreground is null, proceeding anyway (may be fullscreen mode)")
         }
 
-        // MIUI 特定策略：先尝试直接启动 Activity（配合 moveTaskToFront）
-        if (PermissionHelper.isMiui()) {
-            Log.d(TAG, "[Service] MIUI detected, using direct launch strategy")
-            launchOverlayDirectly(packageName, appName, countdownSeconds, redirectPackage, isLimitReached, usedMinutes, limitMinutes)
-        } else {
-            // 非 MIUI 设备：使用标准的 Full-Screen Intent
-            Log.d(TAG, "[Service] Non-MIUI device, using Full-Screen Intent")
-            NotificationHelper.showInterventionNotification(
-                context = this,
-                packageName = packageName,
-                appName = appName,
-                countdownSeconds = countdownSeconds,
-                redirectPackage = redirectPackage,
-                isLimitReached = isLimitReached,
-                usedMinutes = usedMinutes,
-                limitMinutes = limitMinutes
-            )
-        }
+        // 统一启动策略：直接启动 Activity（所有设备）
+        // 不再依赖 Full-Screen Intent，避免不同 ROM 的兼容性问题
+        Log.d(TAG, "[Service] Launching OverlayActivity directly (unified strategy)")
+        launchOverlayDirectly(packageName, appName, countdownSeconds, redirectPackage, isLimitReached, usedMinutes, limitMinutes)
 
-        // WindowManager 悬浮窗作为备用（所有设备）
-        OverlayService.start(
-            context = this,
-            packageName = packageName,
-            appName = appName,
-            countdownSeconds = countdownSeconds,
-            redirectPackage = redirectPackage,
-            isLimitReached = isLimitReached,
-            usedMinutes = usedMinutes,
-            limitMinutes = limitMinutes
-        )
-        Log.d(TAG, "[Service] OverlayService.start() called as backup")
+        // OverlayService 已弃用，统一使用 OverlayActivity（Compose UI）
+        // 删除旧的 WindowManager 悬浮窗以避免两阶段渲染问题
     }
 
     /**
-     * MIUI 特定：直接启动 OverlayActivity 并强制移到前台
+     * 直接启动 OverlayActivity 并强制移到前台
+     *
+     * 适用于所有设备，避免 Full-Screen Intent 的兼容性问题
      *
      * 策略：
      * 1. 先启动 Activity
      * 2. 使用 ActivityManager.moveTaskToFront() 强制将任务移到前台
-     * 3. 延迟一点时间后再次 moveTaskToFront，确保显示
+     * 3. 延迟重试确保显示（100ms、300ms）
+     * 4. 失败时回退到 Full-Screen Intent
      */
     private fun launchOverlayDirectly(
         packageName: String,

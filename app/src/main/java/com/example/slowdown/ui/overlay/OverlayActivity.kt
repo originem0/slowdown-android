@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.slowdown.R
 import com.example.slowdown.SlowDownApp
-import com.example.slowdown.service.OverlayService
 import com.example.slowdown.ui.theme.*
 import com.example.slowdown.util.LocaleHelper
 import com.example.slowdown.util.NotificationHelper
@@ -83,9 +82,6 @@ class OverlayActivity : ComponentActivity() {
 
         // 取消通知
         NotificationHelper.cancelNotification(this)
-
-        // 停止 OverlayService
-        stopService(android.content.Intent(this, OverlayService::class.java))
 
         // 设置窗口属性
         window.addFlags(
@@ -256,18 +252,6 @@ private fun MindfulOverlayScreen(
                     color = Color.White.copy(alpha = 0.6f),
                     style = MaterialTheme.typography.bodyMedium
                 )
-
-                // 显示自定义提醒语
-                if (!customReminderText.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "「$customReminderText」",
-                        color = Color(0xFFFFB74D).copy(alpha = 0.8f),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center
-                    )
-                }
             } else {
                 Text(
                     text = stringResource(R.string.overlay_deep_breath),
@@ -285,18 +269,6 @@ private fun MindfulOverlayScreen(
                     fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Center
                 )
-
-                // 显示自定义提醒语
-                if (!customReminderText.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "「$customReminderText」",
-                        color = Sage400.copy(alpha = 0.9f),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center
-                    )
-                }
             }
 
             Spacer(modifier = Modifier.height(48.dp))
@@ -310,7 +282,19 @@ private fun MindfulOverlayScreen(
                 isLimitReached = isLimitReached
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 显示自定义提醒语 - 位置移至呼吸圈下方
+            if (!customReminderText.isNullOrBlank()) {
+                Text(
+                    text = "「$customReminderText」",
+                    color = Color(0xFFFFD54F),  // 金黄色
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,  // 加粗
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // 提示文字
             Text(
