@@ -39,7 +39,6 @@ import com.example.slowdown.util.NotificationHelper
 import com.example.slowdown.util.PackageUtils
 import com.example.slowdown.viewmodel.OverlayViewModel
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.PI
 import kotlin.math.cos
@@ -69,17 +68,9 @@ class OverlayActivity : ComponentActivity() {
             return
         }
 
-        // Get the saved language preference synchronously
+        // 使用缓存的语言设置，避免阻塞 I/O（从 1000ms 降至 <1ms）
         val app = newBase.applicationContext as? SlowDownApp
-        val language = if (app != null) {
-            runBlocking {
-                withTimeoutOrNull(1000L) {  // 1 second timeout
-                    app.userPreferences.appLanguage.first()
-                } ?: "en"  // Default to English if timeout
-            }
-        } else {
-            "en"
-        }
+        val language = app?.cachedLanguage ?: "en"
 
         val localizedContext = LocaleHelper.setLocale(newBase, language)
         super.attachBaseContext(localizedContext)
@@ -117,20 +108,22 @@ class OverlayActivity : ComponentActivity() {
         val usedMinutes = intent.getIntExtra(EXTRA_USED_MINUTES, 0)
         val limitMinutes = intent.getIntExtra(EXTRA_LIMIT_MINUTES, 0)
 
-        // 读取自定义提醒语并随机选择一条
-        val customReminderText = runBlocking {
-            withTimeoutOrNull(500L) {
-                val texts = (application as SlowDownApp).userPreferences.customReminderTexts.first()
-                val lines = texts.split("\n").filter { it.isNotBlank() }.take(10)
-                lines.randomOrNull()
-            }
-        }
-
         Log.d(TAG, "[Overlay] packageName=$packageName, appName=$appName, countdown=$countdownSeconds, isLimitReached=$isLimitReached")
 
         viewModel.startCountdown(packageName, appName, countdownSeconds)
 
         setContent {
+            // 异步加载自定义提醒语，避免阻塞 UI 渲染
+            var customReminderText by remember { mutableStateOf<String?>(null) }
+
+            LaunchedEffect(Unit) {
+                customReminderText = withTimeoutOrNull(500L) {
+                    val texts = (application as SlowDownApp).userPreferences.customReminderTexts.first()
+                    val lines = texts.split("\n").filter { it.isNotBlank() }.take(10)
+                    lines.randomOrNull()
+                }
+            }
+
             SlowDownTheme {
                 MindfulOverlayScreen(
                     viewModel = viewModel,

@@ -4,4 +4,18 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
+
+    <!-- Overlay theme for dark mode - ensures consistent dark background -->
+    <style name="Theme.SlowDown.Overlay" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowBackground">@drawable/overlay_window_background</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:statusBarColor">@color/overlay_background</item>
+        <item name="android:navigationBarColor">@color/overlay_background</item>
+        <!-- Disable splash screen to prevent black/white flash -->
+        <item name="android:windowSplashScreenBackground">@color/overlay_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@null</item>
+        <item name="android:windowSplashScreenAnimationDuration" tools:targetApi="31">0</item>
+    </style>
 </resources>
