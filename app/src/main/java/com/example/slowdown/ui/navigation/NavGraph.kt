@@ -1,4 +1,4 @@
-package com.example.slowdown.ui.navigation
+package com.sharonZ.slowdown.ui.navigation
 
 import android.content.Context
 import androidx.compose.foundation.layout.padding
@@ -27,18 +27,18 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
-import com.example.slowdown.R
-import com.example.slowdown.data.repository.SlowDownRepository
-import com.example.slowdown.ui.screen.AppDetailScreen
-import com.example.slowdown.ui.screen.AppListScreen
-import com.example.slowdown.ui.screen.DashboardScreen
-import com.example.slowdown.ui.screen.SettingsScreen
-import com.example.slowdown.ui.screen.StatisticsScreen
-import com.example.slowdown.viewmodel.AppDetailViewModel
-import com.example.slowdown.viewmodel.AppListViewModel
-import com.example.slowdown.viewmodel.DashboardViewModel
-import com.example.slowdown.viewmodel.SettingsViewModel
-import com.example.slowdown.viewmodel.StatisticsViewModel
+import com.sharonZ.slowdown.R
+import com.sharonZ.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.ui.screen.AppDetailScreen
+import com.sharonZ.slowdown.ui.screen.AppListScreen
+import com.sharonZ.slowdown.ui.screen.DashboardScreen
+import com.sharonZ.slowdown.ui.screen.SettingsScreen
+import com.sharonZ.slowdown.ui.screen.StatisticsScreen
+import com.sharonZ.slowdown.viewmodel.AppDetailViewModel
+import com.sharonZ.slowdown.viewmodel.AppListViewModel
+import com.sharonZ.slowdown.viewmodel.DashboardViewModel
+import com.sharonZ.slowdown.viewmodel.SettingsViewModel
+import com.sharonZ.slowdown.viewmodel.StatisticsViewModel
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets

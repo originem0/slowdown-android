@@ -1,4 +1,4 @@
-package com.example.slowdown.ui.components
+package com.sharonZ.slowdown.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons

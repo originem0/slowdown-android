@@ -127,7 +127,7 @@ adb shell settings get secure enabled_accessibility_services
 adb shell appops get <package> GET_USAGE_STATS
 
 # 强制停止服务重启
-adb shell am force-stop com.example.slowdown
+adb shell am force-stop com.sharonZ.slowdown
 ```
 
 ### 关键检查点

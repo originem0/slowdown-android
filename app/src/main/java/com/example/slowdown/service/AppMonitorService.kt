@@ -1,4 +1,4 @@
-package com.example.slowdown.service
+package com.sharonZ.slowdown.service
 
 import android.accessibilityservice.AccessibilityService
 import android.app.ActivityManager
@@ -11,13 +11,13 @@ import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.app.ServiceCompat
-import com.example.slowdown.SlowDownApp
-import com.example.slowdown.ui.overlay.OverlayActivity
-import com.example.slowdown.ui.warning.UsageWarningActivity
-import com.example.slowdown.util.MiuiHelper
-import com.example.slowdown.util.NotificationHelper
-import com.example.slowdown.util.PackageUtils
-import com.example.slowdown.util.PermissionHelper
+import com.sharonZ.slowdown.SlowDownApp
+import com.sharonZ.slowdown.ui.overlay.OverlayActivity
+import com.sharonZ.slowdown.ui.warning.UsageWarningActivity
+import com.sharonZ.slowdown.util.MiuiHelper
+import com.sharonZ.slowdown.util.NotificationHelper
+import com.sharonZ.slowdown.util.PackageUtils
+import com.sharonZ.slowdown.util.PermissionHelper
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 

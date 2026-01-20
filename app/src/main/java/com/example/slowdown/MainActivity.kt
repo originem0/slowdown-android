@@ -1,4 +1,4 @@
-package com.example.slowdown
+package com.sharonZ.slowdown
 
 import android.content.Context
 import android.os.Bundle
@@ -16,11 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
-import com.example.slowdown.ui.navigation.SlowDownNavGraph
-import com.example.slowdown.ui.onboarding.OnboardingScreen
-import com.example.slowdown.ui.theme.SlowDownTheme
-import com.example.slowdown.util.LocaleHelper
-import com.example.slowdown.viewmodel.OnboardingViewModel
+import com.sharonZ.slowdown.ui.navigation.SlowDownNavGraph
+import com.sharonZ.slowdown.ui.onboarding.OnboardingScreen
+import com.sharonZ.slowdown.ui.theme.SlowDownTheme
+import com.sharonZ.slowdown.util.LocaleHelper
+import com.sharonZ.slowdown.viewmodel.OnboardingViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch

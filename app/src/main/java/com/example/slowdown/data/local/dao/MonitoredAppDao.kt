@@ -1,4 +1,4 @@
-package com.example.slowdown.data.local.dao
+package com.sharonZ.slowdown.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Delete
@@ -6,7 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.example.slowdown.data.local.entity.MonitoredApp
+import com.sharonZ.slowdown.data.local.entity.MonitoredApp
 import kotlinx.coroutines.flow.Flow
 
 @Dao

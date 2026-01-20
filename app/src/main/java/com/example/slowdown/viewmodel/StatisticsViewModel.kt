@@ -1,15 +1,15 @@
-package com.example.slowdown.viewmodel
+package com.sharonZ.slowdown.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.slowdown.data.local.entity.MonitoredApp
-import com.example.slowdown.data.local.entity.UsageRecord
-import com.example.slowdown.data.repository.SlowDownRepository
-import com.example.slowdown.util.AppInfo
-import com.example.slowdown.util.PackageUtils
-import com.example.slowdown.util.formatDuration
+import com.sharonZ.slowdown.data.local.entity.MonitoredApp
+import com.sharonZ.slowdown.data.local.entity.UsageRecord
+import com.sharonZ.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.util.AppInfo
+import com.sharonZ.slowdown.util.PackageUtils
+import com.sharonZ.slowdown.util.formatDuration
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -362,7 +362,7 @@ class StatisticsViewModel(
      * 格式化分钟数为 "X小时 Y分钟" 格式（本地化）
      */
     fun formatDuration(minutes: Int): String {
-        return com.example.slowdown.util.formatDuration(context, minutes)
+        return com.sharonZ.slowdown.util.formatDuration(context, minutes)
     }
 
     private fun getDayOfWeekChinese(dayOfWeek: DayOfWeek): String {

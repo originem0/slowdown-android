@@ -1,4 +1,4 @@
-package com.example.slowdown.ui.components
+package com.sharonZ.slowdown.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -15,9 +15,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.slowdown.ui.theme.ChartColors
-import com.example.slowdown.ui.theme.Error
-import com.example.slowdown.ui.theme.Success
+import com.sharonZ.slowdown.ui.theme.ChartColors
+import com.sharonZ.slowdown.ui.theme.Error
+import com.sharonZ.slowdown.ui.theme.Success
 
 /**
  * 图表数据段

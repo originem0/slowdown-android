@@ -1,4 +1,4 @@
-package com.example.slowdown.ui.components
+package com.sharonZ.slowdown.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.text.selection.TextSelectionColors
-import com.example.slowdown.R
+import com.sharonZ.slowdown.R
 
 /**
  * Telegram 风格 UI 组件库

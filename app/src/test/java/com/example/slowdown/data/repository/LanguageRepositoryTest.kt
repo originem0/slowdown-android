@@ -1,7 +1,7 @@
-package com.example.slowdown.data.repository
+package com.sharonZ.slowdown.data.repository
 
 import app.cash.turbine.test
-import com.example.slowdown.data.preferences.UserPreferences
+import com.sharonZ.slowdown.data.preferences.UserPreferences
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

@@ -1,12 +1,12 @@
-package com.example.slowdown
+package com.sharonZ.slowdown
 
 import android.app.Application
 import android.util.Log
-import com.example.slowdown.data.local.AppDatabase
-import com.example.slowdown.data.preferences.UserPreferences
-import com.example.slowdown.data.repository.SlowDownRepository
-import com.example.slowdown.util.MiuiHelper
-import com.example.slowdown.util.NotificationHelper
+import com.sharonZ.slowdown.data.local.AppDatabase
+import com.sharonZ.slowdown.data.preferences.UserPreferences
+import com.sharonZ.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.util.MiuiHelper
+import com.sharonZ.slowdown.util.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

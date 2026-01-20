@@ -1,12 +1,12 @@
-package com.example.slowdown.viewmodel
+package com.sharonZ.slowdown.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.slowdown.data.repository.SlowDownRepository
-import com.example.slowdown.util.MiuiHelper
-import com.example.slowdown.util.PermissionHelper
+import com.sharonZ.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.util.MiuiHelper
+import com.sharonZ.slowdown.util.PermissionHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 

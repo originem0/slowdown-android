@@ -180,7 +180,7 @@
 
 ```kotlin
 import androidx.compose.ui.res.stringResource
-import com.example.slowdown.R
+import com.sharonZ.slowdown.R
 ```
 
 **Step 2:** 替换 AlertBanner 中的硬编码字符串
@@ -252,7 +252,7 @@ Text(
 
 ```kotlin
 import androidx.compose.ui.res.stringResource
-import com.example.slowdown.R
+import com.sharonZ.slowdown.R
 ```
 
 **Step 2:** 替换 SectionTitle 字符串
@@ -314,7 +314,7 @@ val modeText = when {
 
 ```kotlin
 import androidx.compose.ui.res.stringResource
-import com.example.slowdown.R
+import com.sharonZ.slowdown.R
 ```
 
 **Step 2:** 替换 SectionTitle 字符串
@@ -374,7 +374,7 @@ val comparisonText = if (diff != 0) {
 
 ```kotlin
 import androidx.compose.ui.res.stringResource
-import com.example.slowdown.R
+import com.sharonZ.slowdown.R
 ```
 
 **Step 2:** 替换 TopAppBar 中的字符串

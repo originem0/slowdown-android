@@ -1,14 +1,14 @@
-package com.example.slowdown.viewmodel
+package com.sharonZ.slowdown.viewmodel
 
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.slowdown.data.local.entity.MonitoredApp
-import com.example.slowdown.data.repository.SlowDownRepository
-import com.example.slowdown.util.AppInfo
-import com.example.slowdown.util.PackageUtils
+import com.sharonZ.slowdown.data.local.entity.MonitoredApp
+import com.sharonZ.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.util.AppInfo
+import com.sharonZ.slowdown.util.PackageUtils
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull

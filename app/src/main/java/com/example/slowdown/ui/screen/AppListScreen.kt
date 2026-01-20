@@ -1,4 +1,4 @@
-package com.example.slowdown.ui.screen
+package com.sharonZ.slowdown.ui.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -24,14 +24,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.slowdown.data.local.entity.MonitoredApp
-import com.example.slowdown.ui.components.*
-import com.example.slowdown.util.AppInfo
-import com.example.slowdown.viewmodel.AppListViewModel
+import com.sharonZ.slowdown.data.local.entity.MonitoredApp
+import com.sharonZ.slowdown.ui.components.*
+import com.sharonZ.slowdown.util.AppInfo
+import com.sharonZ.slowdown.viewmodel.AppListViewModel
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import java.util.Locale
 import androidx.compose.ui.res.stringResource
-import com.example.slowdown.R
+import com.sharonZ.slowdown.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

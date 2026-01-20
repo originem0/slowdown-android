@@ -1,4 +1,4 @@
-package com.example.slowdown.ui.theme
+package com.sharonZ.slowdown.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

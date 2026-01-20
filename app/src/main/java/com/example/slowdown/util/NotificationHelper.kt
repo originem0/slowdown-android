@@ -1,4 +1,4 @@
-package com.example.slowdown.util
+package com.sharonZ.slowdown.util
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -9,10 +9,10 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.example.slowdown.MainActivity
-import com.example.slowdown.R
-import com.example.slowdown.service.UsageWarningType
-import com.example.slowdown.ui.overlay.OverlayActivity
+import com.sharonZ.slowdown.MainActivity
+import com.sharonZ.slowdown.R
+import com.sharonZ.slowdown.service.UsageWarningType
+import com.sharonZ.slowdown.ui.overlay.OverlayActivity
 
 /**
  * 通知帮助类 - 使用 Full-Screen Intent 实现类似闹钟的全屏弹窗

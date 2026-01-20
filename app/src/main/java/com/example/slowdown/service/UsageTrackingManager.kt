@@ -1,4 +1,4 @@
-package com.example.slowdown.service
+package com.sharonZ.slowdown.service
 
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
@@ -6,7 +6,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.example.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.data.repository.SlowDownRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

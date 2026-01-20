@@ -1,4 +1,4 @@
-package com.example.slowdown.ui.warning
+package com.sharonZ.slowdown.ui.warning
 
 import android.content.Context
 import android.os.Bundle
@@ -24,12 +24,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
-import com.example.slowdown.R
-import com.example.slowdown.SlowDownApp
-import com.example.slowdown.service.UsageWarningType
-import com.example.slowdown.ui.theme.*
-import com.example.slowdown.util.LocaleHelper
-import com.example.slowdown.util.PackageUtils
+import com.sharonZ.slowdown.R
+import com.sharonZ.slowdown.SlowDownApp
+import com.sharonZ.slowdown.service.UsageWarningType
+import com.sharonZ.slowdown.ui.theme.*
+import com.sharonZ.slowdown.util.LocaleHelper
+import com.sharonZ.slowdown.util.PackageUtils
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull

@@ -95,11 +95,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.slowdown"
+    namespace = "com.sharonZ.slowdown"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.slowdown"
+        applicationId = "com.sharonZ.slowdown"
         minSdk = 29
         targetSdk = 35
         versionCode = 1
@@ -185,7 +185,7 @@ git commit -m "chore: configure Compose, Room, DataStore dependencies"
 Create `app/src/main/java/com/example/slowdown/data/local/entity/InterventionRecord.kt`:
 
 ```kotlin
-package com.example.slowdown.data.local.entity
+package com.sharonZ.slowdown.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -209,7 +209,7 @@ data class InterventionRecord(
 Create `app/src/main/java/com/example/slowdown/data/local/entity/MonitoredApp.kt`:
 
 ```kotlin
-package com.example.slowdown.data.local.entity
+package com.sharonZ.slowdown.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -251,12 +251,12 @@ git commit -m "feat(data): add Room entities for intervention records and monito
 Create `app/src/main/java/com/example/slowdown/data/local/dao/InterventionDao.kt`:
 
 ```kotlin
-package com.example.slowdown.data.local.dao
+package com.sharonZ.slowdown.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
-import com.example.slowdown.data.local.entity.InterventionRecord
+import com.sharonZ.slowdown.data.local.entity.InterventionRecord
 import kotlinx.coroutines.flow.Flow
 
 data class DailyStat(
@@ -314,7 +314,7 @@ interface InterventionDao {
 Create `app/src/main/java/com/example/slowdown/data/local/dao/MonitoredAppDao.kt`:
 
 ```kotlin
-package com.example.slowdown.data.local.dao
+package com.sharonZ.slowdown.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Delete
@@ -322,7 +322,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.example.slowdown.data.local.entity.MonitoredApp
+import com.sharonZ.slowdown.data.local.entity.MonitoredApp
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -378,16 +378,16 @@ git commit -m "feat(data): add Room DAOs for interventions and monitored apps"
 Create `app/src/main/java/com/example/slowdown/data/local/AppDatabase.kt`:
 
 ```kotlin
-package com.example.slowdown.data.local
+package com.sharonZ.slowdown.data.local
 
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.example.slowdown.data.local.dao.InterventionDao
-import com.example.slowdown.data.local.dao.MonitoredAppDao
-import com.example.slowdown.data.local.entity.InterventionRecord
-import com.example.slowdown.data.local.entity.MonitoredApp
+import com.sharonZ.slowdown.data.local.dao.InterventionDao
+import com.sharonZ.slowdown.data.local.dao.MonitoredAppDao
+import com.sharonZ.slowdown.data.local.entity.InterventionRecord
+import com.sharonZ.slowdown.data.local.entity.MonitoredApp
 
 @Database(
     entities = [InterventionRecord::class, MonitoredApp::class],
@@ -442,7 +442,7 @@ git commit -m "feat(data): add Room database configuration"
 Create `app/src/main/java/com/example/slowdown/data/preferences/UserPreferences.kt`:
 
 ```kotlin
-package com.example.slowdown.data.preferences
+package com.sharonZ.slowdown.data.preferences
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -517,15 +517,15 @@ git commit -m "feat(data): add DataStore preferences for user settings"
 Create `app/src/main/java/com/example/slowdown/data/repository/SlowDownRepository.kt`:
 
 ```kotlin
-package com.example.slowdown.data.repository
+package com.sharonZ.slowdown.data.repository
 
-import com.example.slowdown.data.local.dao.AppStat
-import com.example.slowdown.data.local.dao.DailyStat
-import com.example.slowdown.data.local.dao.InterventionDao
-import com.example.slowdown.data.local.dao.MonitoredAppDao
-import com.example.slowdown.data.local.entity.InterventionRecord
-import com.example.slowdown.data.local.entity.MonitoredApp
-import com.example.slowdown.data.preferences.UserPreferences
+import com.sharonZ.slowdown.data.local.dao.AppStat
+import com.sharonZ.slowdown.data.local.dao.DailyStat
+import com.sharonZ.slowdown.data.local.dao.InterventionDao
+import com.sharonZ.slowdown.data.local.dao.MonitoredAppDao
+import com.sharonZ.slowdown.data.local.entity.InterventionRecord
+import com.sharonZ.slowdown.data.local.entity.MonitoredApp
+import com.sharonZ.slowdown.data.preferences.UserPreferences
 import kotlinx.coroutines.flow.Flow
 import java.util.Calendar
 
@@ -608,12 +608,12 @@ git commit -m "feat(data): add repository to aggregate data access"
 Create `app/src/main/java/com/example/slowdown/SlowDownApp.kt`:
 
 ```kotlin
-package com.example.slowdown
+package com.sharonZ.slowdown
 
 import android.app.Application
-import com.example.slowdown.data.local.AppDatabase
-import com.example.slowdown.data.preferences.UserPreferences
-import com.example.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.data.local.AppDatabase
+import com.sharonZ.slowdown.data.preferences.UserPreferences
+import com.sharonZ.slowdown.data.repository.SlowDownRepository
 
 class SlowDownApp : Application() {
 
@@ -696,7 +696,7 @@ git commit -m "feat: add Application class with dependency initialization"
 Create `app/src/main/java/com/example/slowdown/util/PackageUtils.kt`:
 
 ```kotlin
-package com.example.slowdown.util
+package com.sharonZ.slowdown.util
 
 import android.content.Context
 import android.content.Intent
@@ -803,7 +803,7 @@ object PackageUtils {
 Create `app/src/main/java/com/example/slowdown/util/PermissionHelper.kt`:
 
 ```kotlin
-package com.example.slowdown.util
+package com.sharonZ.slowdown.util
 
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.ComponentName
@@ -927,7 +927,7 @@ git commit -m "feat(util): add PackageUtils and PermissionHelper"
 Create `app/src/main/java/com/example/slowdown/ui/theme/Color.kt`:
 
 ```kotlin
-package com.example.slowdown.ui.theme
+package com.sharonZ.slowdown.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
@@ -952,7 +952,7 @@ val Grey600 = Color(0xFF757575)
 Create `app/src/main/java/com/example/slowdown/ui/theme/Type.kt`:
 
 ```kotlin
-package com.example.slowdown.ui.theme
+package com.sharonZ.slowdown.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
@@ -1011,7 +1011,7 @@ val Typography = Typography(
 Create `app/src/main/java/com/example/slowdown/ui/theme/Theme.kt`:
 
 ```kotlin
-package com.example.slowdown.ui.theme
+package com.sharonZ.slowdown.ui.theme
 
 import android.app.Activity
 import android.os.Build
@@ -1096,14 +1096,14 @@ git commit -m "feat(ui): add Material3 theme configuration"
 Create `app/src/main/java/com/example/slowdown/viewmodel/DashboardViewModel.kt`:
 
 ```kotlin
-package com.example.slowdown.viewmodel
+package com.sharonZ.slowdown.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.slowdown.data.local.dao.AppStat
-import com.example.slowdown.data.local.dao.DailyStat
-import com.example.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.data.local.dao.AppStat
+import com.sharonZ.slowdown.data.local.dao.DailyStat
+import com.sharonZ.slowdown.data.repository.SlowDownRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -1167,7 +1167,7 @@ git commit -m "feat(viewmodel): add DashboardViewModel"
 Create `app/src/main/java/com/example/slowdown/ui/screen/DashboardScreen.kt`:
 
 ```kotlin
-package com.example.slowdown.ui.screen
+package com.sharonZ.slowdown.ui.screen
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
@@ -1186,9 +1186,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.slowdown.data.local.dao.AppStat
-import com.example.slowdown.data.local.dao.DailyStat
-import com.example.slowdown.viewmodel.DashboardViewModel
+import com.sharonZ.slowdown.data.local.dao.AppStat
+import com.sharonZ.slowdown.data.local.dao.DailyStat
+import com.sharonZ.slowdown.viewmodel.DashboardViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1469,16 +1469,16 @@ git commit -m "feat(ui): add DashboardScreen with stats display"
 Create `app/src/main/java/com/example/slowdown/viewmodel/AppListViewModel.kt`:
 
 ```kotlin
-package com.example.slowdown.viewmodel
+package com.sharonZ.slowdown.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.slowdown.data.local.entity.MonitoredApp
-import com.example.slowdown.data.repository.SlowDownRepository
-import com.example.slowdown.util.AppInfo
-import com.example.slowdown.util.PackageUtils
+import com.sharonZ.slowdown.data.local.entity.MonitoredApp
+import com.sharonZ.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.util.AppInfo
+import com.sharonZ.slowdown.util.PackageUtils
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -1546,7 +1546,7 @@ class AppListViewModel(
 Create `app/src/main/java/com/example/slowdown/ui/screen/AppListScreen.kt`:
 
 ```kotlin
-package com.example.slowdown.ui.screen
+package com.sharonZ.slowdown.ui.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -1559,8 +1559,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.slowdown.util.AppInfo
-import com.example.slowdown.viewmodel.AppListViewModel
+import com.sharonZ.slowdown.util.AppInfo
+import com.sharonZ.slowdown.viewmodel.AppListViewModel
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1696,14 +1696,14 @@ git commit -m "feat(ui): add AppListScreen for selecting monitored apps"
 Create `app/src/main/java/com/example/slowdown/viewmodel/SettingsViewModel.kt`:
 
 ```kotlin
-package com.example.slowdown.viewmodel
+package com.sharonZ.slowdown.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.slowdown.data.repository.SlowDownRepository
-import com.example.slowdown.util.PermissionHelper
+import com.sharonZ.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.util.PermissionHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -1790,7 +1790,7 @@ class SettingsViewModel(
 Create `app/src/main/java/com/example/slowdown/ui/screen/SettingsScreen.kt`:
 
 ```kotlin
-package com.example.slowdown.ui.screen
+package com.sharonZ.slowdown.ui.screen
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -1802,7 +1802,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.slowdown.viewmodel.SettingsViewModel
+import com.sharonZ.slowdown.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -2039,7 +2039,7 @@ Create `app/src/main/res/xml/accessibility_service_config.xml`:
     android:canRetrieveWindowContent="false"
     android:description="@string/accessibility_service_description"
     android:notificationTimeout="100"
-    android:settingsActivity="com.example.slowdown.MainActivity" />
+    android:settingsActivity="com.sharonZ.slowdown.MainActivity" />
 ```
 
 **Step 2: Add string resource**
@@ -2058,14 +2058,14 @@ Update `app/src/main/res/values/strings.xml`:
 Create `app/src/main/java/com/example/slowdown/service/AppMonitorService.kt`:
 
 ```kotlin
-package com.example.slowdown.service
+package com.sharonZ.slowdown.service
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
-import com.example.slowdown.SlowDownApp
-import com.example.slowdown.ui.overlay.OverlayActivity
-import com.example.slowdown.util.PackageUtils
+import com.sharonZ.slowdown.SlowDownApp
+import com.sharonZ.slowdown.ui.overlay.OverlayActivity
+import com.sharonZ.slowdown.util.PackageUtils
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 
@@ -2242,13 +2242,13 @@ git commit -m "feat(service): add AccessibilityService for app monitoring"
 Create `app/src/main/java/com/example/slowdown/viewmodel/OverlayViewModel.kt`:
 
 ```kotlin
-package com.example.slowdown.viewmodel
+package com.sharonZ.slowdown.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.slowdown.data.local.entity.InterventionRecord
-import com.example.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.data.local.entity.InterventionRecord
+import com.sharonZ.slowdown.data.repository.SlowDownRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -2328,7 +2328,7 @@ class OverlayViewModel(
 Create `app/src/main/java/com/example/slowdown/ui/overlay/OverlayActivity.kt`:
 
 ```kotlin
-package com.example.slowdown.ui.overlay
+package com.sharonZ.slowdown.ui.overlay
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -2344,10 +2344,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.slowdown.SlowDownApp
-import com.example.slowdown.ui.theme.SlowDownTheme
-import com.example.slowdown.util.PackageUtils
-import com.example.slowdown.viewmodel.OverlayViewModel
+import com.sharonZ.slowdown.SlowDownApp
+import com.sharonZ.slowdown.ui.theme.SlowDownTheme
+import com.sharonZ.slowdown.util.PackageUtils
+import com.sharonZ.slowdown.viewmodel.OverlayViewModel
 
 class OverlayActivity : ComponentActivity() {
 
@@ -2544,7 +2544,7 @@ git commit -m "feat(ui): add OverlayActivity for intervention display"
 Create `app/src/main/java/com/example/slowdown/ui/navigation/NavGraph.kt`:
 
 ```kotlin
-package com.example.slowdown.ui.navigation
+package com.sharonZ.slowdown.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -2552,13 +2552,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.slowdown.SlowDownApp
-import com.example.slowdown.ui.screen.AppListScreen
-import com.example.slowdown.ui.screen.DashboardScreen
-import com.example.slowdown.ui.screen.SettingsScreen
-import com.example.slowdown.viewmodel.AppListViewModel
-import com.example.slowdown.viewmodel.DashboardViewModel
-import com.example.slowdown.viewmodel.SettingsViewModel
+import com.sharonZ.slowdown.SlowDownApp
+import com.sharonZ.slowdown.ui.screen.AppListScreen
+import com.sharonZ.slowdown.ui.screen.DashboardScreen
+import com.sharonZ.slowdown.ui.screen.SettingsScreen
+import com.sharonZ.slowdown.viewmodel.AppListViewModel
+import com.sharonZ.slowdown.viewmodel.DashboardViewModel
+import com.sharonZ.slowdown.viewmodel.SettingsViewModel
 
 sealed class Screen(val route: String) {
     data object Dashboard : Screen("dashboard")
@@ -2614,7 +2614,7 @@ fun NavGraph(navController: NavHostController) {
 Replace `app/src/main/java/com/example/slowdown/MainActivity.kt`:
 
 ```kotlin
-package com.example.slowdown
+package com.sharonZ.slowdown
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -2625,8 +2625,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
-import com.example.slowdown.ui.navigation.NavGraph
-import com.example.slowdown.ui.theme.SlowDownTheme
+import com.sharonZ.slowdown.ui.navigation.NavGraph
+import com.sharonZ.slowdown.ui.theme.SlowDownTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

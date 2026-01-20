@@ -1,7 +1,7 @@
-package com.example.slowdown.util
+package com.sharonZ.slowdown.util
 
 import android.content.Context
-import com.example.slowdown.R
+import com.sharonZ.slowdown.R
 
 /**
  * 格式化分钟数为可读字符串（使用本地化资源）

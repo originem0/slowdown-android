@@ -6,4 +6,4 @@
     android:canRetrieveWindowContent="false"
     android:description="@string/accessibility_service_description"
     android:notificationTimeout="100"
-    android:settingsActivity="com.example.slowdown.MainActivity" />
+    android:settingsActivity="com.sharonZ.slowdown.MainActivity" />

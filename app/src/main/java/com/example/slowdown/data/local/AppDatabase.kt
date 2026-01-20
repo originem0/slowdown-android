@@ -1,4 +1,4 @@
-package com.example.slowdown.data.local
+package com.sharonZ.slowdown.data.local
 
 import android.content.Context
 import androidx.room.Database
@@ -6,12 +6,12 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.example.slowdown.data.local.dao.InterventionDao
-import com.example.slowdown.data.local.dao.MonitoredAppDao
-import com.example.slowdown.data.local.dao.UsageRecordDao
-import com.example.slowdown.data.local.entity.InterventionRecord
-import com.example.slowdown.data.local.entity.MonitoredApp
-import com.example.slowdown.data.local.entity.UsageRecord
+import com.sharonZ.slowdown.data.local.dao.InterventionDao
+import com.sharonZ.slowdown.data.local.dao.MonitoredAppDao
+import com.sharonZ.slowdown.data.local.dao.UsageRecordDao
+import com.sharonZ.slowdown.data.local.entity.InterventionRecord
+import com.sharonZ.slowdown.data.local.entity.MonitoredApp
+import com.sharonZ.slowdown.data.local.entity.UsageRecord
 
 @Database(
     entities = [InterventionRecord::class, MonitoredApp::class, UsageRecord::class],

@@ -1,4 +1,4 @@
-package com.example.slowdown.ui.onboarding
+package com.sharonZ.slowdown.ui.onboarding
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -29,11 +29,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.slowdown.R
-import com.example.slowdown.ui.theme.SlowDownDesign as DS
-import com.example.slowdown.viewmodel.OnboardingViewModel
-import com.example.slowdown.viewmodel.PermissionItem
-import com.example.slowdown.viewmodel.PermissionPriority
+import com.sharonZ.slowdown.R
+import com.sharonZ.slowdown.ui.theme.SlowDownDesign as DS
+import com.sharonZ.slowdown.viewmodel.OnboardingViewModel
+import com.sharonZ.slowdown.viewmodel.PermissionItem
+import com.sharonZ.slowdown.viewmodel.PermissionPriority
 
 /**
  * Onboarding Flow for SlowDown

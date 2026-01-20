@@ -1,6 +1,6 @@
-package com.example.slowdown.data.repository
+package com.sharonZ.slowdown.data.repository
 
-import com.example.slowdown.data.preferences.UserPreferences
+import com.sharonZ.slowdown.data.preferences.UserPreferences
 import kotlinx.coroutines.flow.Flow
 
 /**

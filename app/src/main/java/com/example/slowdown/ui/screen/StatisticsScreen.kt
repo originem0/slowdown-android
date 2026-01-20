@@ -1,4 +1,4 @@
-package com.example.slowdown.ui.screen
+package com.sharonZ.slowdown.ui.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,16 +16,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.slowdown.ui.components.*
-import com.example.slowdown.ui.theme.ChartColors
-import com.example.slowdown.viewmodel.AppUsageData
-import com.example.slowdown.viewmodel.DayUsageData
-import com.example.slowdown.viewmodel.MonthComparisonData
-import com.example.slowdown.viewmodel.StatisticsViewModel
+import com.sharonZ.slowdown.ui.components.*
+import com.sharonZ.slowdown.ui.theme.ChartColors
+import com.sharonZ.slowdown.viewmodel.AppUsageData
+import com.sharonZ.slowdown.viewmodel.DayUsageData
+import com.sharonZ.slowdown.viewmodel.MonthComparisonData
+import com.sharonZ.slowdown.viewmodel.StatisticsViewModel
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import kotlin.math.abs
 import androidx.compose.ui.res.stringResource
-import com.example.slowdown.R
+import com.sharonZ.slowdown.R
 
 @Composable
 fun StatisticsScreen(

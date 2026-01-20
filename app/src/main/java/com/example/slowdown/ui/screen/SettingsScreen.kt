@@ -1,4 +1,4 @@
-package com.example.slowdown.ui.screen
+package com.sharonZ.slowdown.ui.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,9 +25,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import android.app.Activity
-import com.example.slowdown.R
-import com.example.slowdown.ui.components.*
-import com.example.slowdown.viewmodel.SettingsViewModel
+import com.sharonZ.slowdown.R
+import com.sharonZ.slowdown.ui.components.*
+import com.sharonZ.slowdown.viewmodel.SettingsViewModel
 import kotlinx.coroutines.delay
 
 @Composable

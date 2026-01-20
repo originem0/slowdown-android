@@ -1,4 +1,4 @@
-package com.example.slowdown.data.preferences
+package com.sharonZ.slowdown.data.preferences
 
 import android.content.Context
 import androidx.datastore.core.DataStore

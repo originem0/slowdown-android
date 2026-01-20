@@ -1,4 +1,4 @@
-package com.example.slowdown.viewmodel
+package com.sharonZ.slowdown.viewmodel
 
 /**
  * 权限状态数据类，供多个 ViewModel 复用

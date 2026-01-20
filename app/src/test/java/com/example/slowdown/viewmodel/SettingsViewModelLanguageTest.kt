@@ -1,8 +1,8 @@
-package com.example.slowdown.viewmodel
+package com.sharonZ.slowdown.viewmodel
 
 import app.cash.turbine.test
-import com.example.slowdown.data.preferences.UserPreferences
-import com.example.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.data.preferences.UserPreferences
+import com.sharonZ.slowdown.data.repository.SlowDownRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

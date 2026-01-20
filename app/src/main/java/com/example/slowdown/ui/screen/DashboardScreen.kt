@@ -1,4 +1,4 @@
-package com.example.slowdown.ui.screen
+package com.sharonZ.slowdown.ui.screen
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
@@ -34,17 +34,17 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import com.example.slowdown.data.local.dao.AppStat
-import com.example.slowdown.data.local.dao.SuccessRateStat
-import com.example.slowdown.ui.components.*
-import com.example.slowdown.viewmodel.AwarenessMoment
-import com.example.slowdown.viewmodel.DashboardViewModel
-import com.example.slowdown.viewmodel.MindfulState
-import com.example.slowdown.viewmodel.PermissionState
-import com.example.slowdown.viewmodel.PeriodStat
-import com.example.slowdown.viewmodel.TimePeriod
+import com.sharonZ.slowdown.data.local.dao.AppStat
+import com.sharonZ.slowdown.data.local.dao.SuccessRateStat
+import com.sharonZ.slowdown.ui.components.*
+import com.sharonZ.slowdown.viewmodel.AwarenessMoment
+import com.sharonZ.slowdown.viewmodel.DashboardViewModel
+import com.sharonZ.slowdown.viewmodel.MindfulState
+import com.sharonZ.slowdown.viewmodel.PermissionState
+import com.sharonZ.slowdown.viewmodel.PeriodStat
+import com.sharonZ.slowdown.viewmodel.TimePeriod
 import androidx.compose.ui.res.stringResource
-import com.example.slowdown.R
+import com.sharonZ.slowdown.R
 
 @Composable
 fun DashboardScreen(

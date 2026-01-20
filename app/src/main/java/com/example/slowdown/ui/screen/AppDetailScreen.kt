@@ -1,4 +1,4 @@
-package com.example.slowdown.ui.screen
+package com.sharonZ.slowdown.ui.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,12 +23,12 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.example.slowdown.ui.components.*
-import com.example.slowdown.util.AppInfo
-import com.example.slowdown.viewmodel.AppDetailViewModel
+import com.sharonZ.slowdown.ui.components.*
+import com.sharonZ.slowdown.util.AppInfo
+import com.sharonZ.slowdown.viewmodel.AppDetailViewModel
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import androidx.compose.ui.res.stringResource
-import com.example.slowdown.R
+import com.sharonZ.slowdown.R
 
 /**
  * 限制模式枚举

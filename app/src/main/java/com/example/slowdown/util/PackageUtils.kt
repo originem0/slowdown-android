@@ -1,4 +1,4 @@
-package com.example.slowdown.util
+package com.sharonZ.slowdown.util
 
 import android.content.Context
 import android.content.Intent

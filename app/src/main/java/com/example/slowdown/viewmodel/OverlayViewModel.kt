@@ -1,10 +1,10 @@
-package com.example.slowdown.viewmodel
+package com.sharonZ.slowdown.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.slowdown.data.local.entity.InterventionRecord
-import com.example.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.data.local.entity.InterventionRecord
+import com.sharonZ.slowdown.data.repository.SlowDownRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow

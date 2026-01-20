@@ -1,4 +1,4 @@
-package com.example.slowdown.viewmodel
+package com.sharonZ.slowdown.viewmodel
 
 import org.junit.Assert.*
 import org.junit.Test

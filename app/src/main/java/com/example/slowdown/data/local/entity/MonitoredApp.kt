@@ -1,4 +1,4 @@
-package com.example.slowdown.data.local.entity
+package com.sharonZ.slowdown.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

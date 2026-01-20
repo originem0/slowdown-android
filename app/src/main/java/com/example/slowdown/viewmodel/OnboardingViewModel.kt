@@ -1,4 +1,4 @@
-package com.example.slowdown.viewmodel
+package com.sharonZ.slowdown.viewmodel
 
 import android.content.Context
 import android.content.Intent
@@ -13,13 +13,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.slowdown.R
-import com.example.slowdown.data.local.entity.MonitoredApp
-import com.example.slowdown.data.preferences.UserPreferences
-import com.example.slowdown.data.repository.SlowDownRepository
-import com.example.slowdown.ui.onboarding.AppInfo
-import com.example.slowdown.util.MiuiHelper
-import com.example.slowdown.util.PermissionHelper
+import com.sharonZ.slowdown.R
+import com.sharonZ.slowdown.data.local.entity.MonitoredApp
+import com.sharonZ.slowdown.data.preferences.UserPreferences
+import com.sharonZ.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.ui.onboarding.AppInfo
+import com.sharonZ.slowdown.util.MiuiHelper
+import com.sharonZ.slowdown.util.PermissionHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

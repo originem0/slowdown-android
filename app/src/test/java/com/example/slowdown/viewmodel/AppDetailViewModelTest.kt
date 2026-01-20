@@ -1,6 +1,6 @@
-package com.example.slowdown.viewmodel
+package com.sharonZ.slowdown.viewmodel
 
-import com.example.slowdown.data.local.entity.UsageRecord
+import com.sharonZ.slowdown.data.local.entity.UsageRecord
 import org.junit.Assert.*
 import org.junit.Test
 import java.time.LocalDate
