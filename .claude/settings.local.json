@@ -113,7 +113,14 @@
       "Bash(JAVA_HOME=\"D:/Scoop/apps/temurin21-jdk/current\" D:/devlopment/SlowDown/gradlew.bat:*)",
       "WebFetch(domain:github.com)",
       "Bash(gradlew.bat assembleDebug:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(git branch:*)",
+      "Skill(think-ultra)",
+      "Bash(Select-Object -Last 50)",
+      "Bash(grep:*)",
+      "Bash(git rm:*)",
+      "Bash(git log:*)",
+      "Bash(python:*)"
     ]
   }
 }

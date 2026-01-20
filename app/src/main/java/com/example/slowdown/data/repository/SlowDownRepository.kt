@@ -2,6 +2,7 @@ package com.example.slowdown.data.repository
 
 import com.example.slowdown.data.local.dao.AppStat
 import com.example.slowdown.data.local.dao.DailyStat
+import com.example.slowdown.data.local.dao.HourlyStat
 import com.example.slowdown.data.local.dao.InterventionDao
 import com.example.slowdown.data.local.dao.MonitoredAppDao
 import com.example.slowdown.data.local.dao.SuccessRateStat
@@ -53,6 +54,23 @@ class SlowDownRepository(
     suspend fun setAppLanguage(language: String) = userPreferences.setAppLanguage(language)
     suspend fun setCustomReminderTexts(texts: String) = userPreferences.setCustomReminderTexts(texts)
 
+    // 数据清理
+    /**
+     * 清理旧数据（默认保留90天）
+     * @param daysToKeep 保留的天数，默认90天
+     * @return 删除的记录数
+     */
+    suspend fun cleanOldData(daysToKeep: Int = 90): Pair<Int, Int> = withContext(Dispatchers.IO) {
+        val cutoffTime = System.currentTimeMillis() - (daysToKeep * 24 * 60 * 60 * 1000L)
+        val cutoffDate = LocalDate.now().minusDays(daysToKeep.toLong()).toString()
+
+        val deletedInterventions = interventionDao.deleteRecordsBefore(cutoffTime)
+        val deletedUsageRecords = usageRecordDao.deleteRecordsBefore(cutoffDate)
+
+        Log.d(TAG, "Cleaned old data: $deletedInterventions interventions, $deletedUsageRecords usage records")
+        Pair(deletedInterventions, deletedUsageRecords)
+    }
+
     // Monitored Apps
     val monitoredApps: Flow<List<MonitoredApp>> = monitoredAppDao.getAll()
     val enabledApps: Flow<List<MonitoredApp>> = monitoredAppDao.getEnabled()
@@ -74,6 +92,24 @@ class SlowDownRepository(
     fun getTopApps(): Flow<List<AppStat>> = interventionDao.getTopApps(getWeekStart())
     fun getRecentInterventions(limit: Int = 20): Flow<List<InterventionRecord>> = interventionDao.getRecent(limit)
     fun getTodayInterventions(): Flow<List<InterventionRecord>> = interventionDao.getTodayRecords(getTodayStart())
+
+    // 新增：平均决策时间（秒）
+    fun getTodayAverageDecisionTime(): Flow<Float?> = interventionDao.getAverageDecisionTime(getTodayStart())
+
+    // 新增：时段分布
+    fun getTodayHourlyDistribution(): Flow<List<HourlyStat>> = interventionDao.getHourlyDistribution(getTodayStart())
+
+    // 新增：获取日期范围内的每日拦截统计
+    suspend fun getDailyStatsBetween(startTime: Long, endTime: Long): List<DailyStat> =
+        interventionDao.getDailyStatsBetween(startTime, endTime)
+
+    // 新增：获取日期范围内的拦截次数
+    suspend fun getCountBetween(startTime: Long, endTime: Long): Int =
+        interventionDao.getCountBetween(startTime, endTime)
+
+    // 新增：获取日期范围内的成功率
+    suspend fun getSuccessRateBetween(startTime: Long, endTime: Long): SuccessRateStat =
+        interventionDao.getSuccessRateBetween(startTime, endTime)
 
     private fun getTodayStart(): Long {
         return Calendar.getInstance().apply {
@@ -105,15 +141,39 @@ class SlowDownRepository(
     }
 
     /**
+     * 批量获取多个日期的使用记录（优化N+1查询）
+     * @param dates 日期列表
+     * @return Map<packageName_date, UsageRecord> 方便快速查找
+     */
+    suspend fun getUsageRecordsByDates(dates: List<String>): Map<String, UsageRecord> {
+        val records = usageRecordDao.getRecordsByDates(dates)
+        return records.associateBy { "${it.packageName}_${it.date}" }
+    }
+
+    /**
      * 更新指定应用的使用分钟数（今日）
+     * 使用 UPSERT 操作确保数据一致性
+     *
+     * 注意：此方法接收的是绝对值（不是增量），会直接覆盖数据库中的记录
+     * 调用方需确保传入的 minutes 是完整的今日累计值
+     *
+     * 数据源优先级：
+     * 1. UsageStatsManager 同步操作（权威数据源，来自Android系统）
+     * 2. 实时追踪（手动累加，在同步间隙提供快速更新）
+     * 两者都使用绝对值更新，由定期同步确保最终一致性
      */
     suspend fun updateUsageMinutes(packageName: String, minutes: Int) {
+        // 边界值验证：使用分钟数应该在合理范围内（0-1440分钟，即一天）
+        val validatedMinutes = minutes.coerceIn(0, 1440)
+
         val today = getTodayDateString()
+        val timestamp = System.currentTimeMillis()
+
         val record = UsageRecord(
             packageName = packageName,
             date = today,
-            usageMinutes = minutes,
-            lastUpdated = System.currentTimeMillis()
+            usageMinutes = validatedMinutes,
+            lastUpdated = timestamp
         )
         usageRecordDao.upsert(record)
     }

@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.slowdown"
+    namespace = "com.sharonZ.slowdown"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.slowdown"
+        applicationId = "com.sharonZ.slowdown"
         minSdk = 29
         targetSdk = 35
         versionCode = 1

@@ -20,6 +20,7 @@ import com.example.slowdown.ui.components.*
 import com.example.slowdown.ui.theme.ChartColors
 import com.example.slowdown.viewmodel.AppUsageData
 import com.example.slowdown.viewmodel.DayUsageData
+import com.example.slowdown.viewmodel.MonthComparisonData
 import com.example.slowdown.viewmodel.StatisticsViewModel
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import kotlin.math.abs
@@ -38,6 +39,7 @@ fun StatisticsScreen(
     val todayUsageByApp by viewModel.todayUsageByApp.collectAsState()
     val weeklyUsage by viewModel.weeklyUsage.collectAsState()
     val monthTotalMinutes by viewModel.monthTotalMinutes.collectAsState()
+    val monthComparison by viewModel.monthComparison.collectAsState()
 
     if (isLoading) {
         Box(
@@ -123,6 +125,7 @@ fun StatisticsScreen(
         item {
             MonthSection(
                 monthTotalMinutes = monthTotalMinutes,
+                monthComparison = monthComparison,
                 formatDuration = viewModel::formatDuration
             )
         }
@@ -277,7 +280,9 @@ private fun WeeklyBarSection(
                         label = day.dayOfWeek,
                         value = day.totalMinutes.toFloat(),
                         displayText = formatDuration(day.totalMinutes),
-                        isSelected = day.isSelected
+                        isSelected = day.isSelected,
+                        secondaryValue = day.interventionCount,
+                        secondaryText = if (day.interventionCount > 0) "${day.interventionCount}次" else ""
                     )
                 }
             }
@@ -292,6 +297,7 @@ private fun WeeklyBarSection(
 
             // 本周总计
             val weekTotal = weeklyUsage.sumOf { it.totalMinutes }
+            val weekInterventions = weeklyUsage.sumOf { it.interventionCount }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -302,12 +308,24 @@ private fun WeeklyBarSection(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = formatDuration(weekTotal),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = formatDuration(weekTotal),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    if (weekInterventions > 0) {
+                        Text(
+                            text = stringResource(R.string.weekly_interventions, weekInterventions),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+                }
             }
         }
     }
@@ -422,18 +440,125 @@ private fun AppUsageItem(
 @Composable
 private fun MonthSection(
     monthTotalMinutes: Int,
+    monthComparison: MonthComparisonData?,
     formatDuration: (Int) -> String
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        ValueListItem(
-            title = stringResource(R.string.month_total_usage),
-            value = formatDuration(monthTotalMinutes),
-            valueColor = MaterialTheme.colorScheme.secondary
+        if (monthComparison != null) {
+            // 标题
+            Text(
+                text = stringResource(R.string.month_comparison_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 使用时长对比
+            MonthComparisonRow(
+                label = stringResource(R.string.month_usage_time),
+                thisMonthValue = formatDuration(monthComparison.thisMonthUsage),
+                lastMonthValue = formatDuration(monthComparison.lastMonthUsage),
+                changePercent = monthComparison.usageChange,
+                isLowerBetter = true
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 拦截次数对比
+            MonthComparisonRow(
+                label = stringResource(R.string.month_interventions),
+                thisMonthValue = monthComparison.thisMonthInterventions.toString(),
+                lastMonthValue = monthComparison.lastMonthInterventions.toString(),
+                changePercent = monthComparison.interventionChange,
+                isLowerBetter = true
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 成功率对比
+            MonthComparisonRow(
+                label = stringResource(R.string.month_success_rate),
+                thisMonthValue = "${monthComparison.thisMonthSuccessRate}%",
+                lastMonthValue = "${monthComparison.lastMonthSuccessRate}%",
+                changePercent = monthComparison.successRateChange,
+                isLowerBetter = false,
+                isPercentageChange = true
+            )
+        } else {
+            // 没有对比数据时显示原来的总计
+            ValueListItem(
+                title = stringResource(R.string.month_total_usage),
+                value = formatDuration(monthTotalMinutes),
+                valueColor = MaterialTheme.colorScheme.secondary
+            )
+        }
+    }
+}
+
+@Composable
+private fun MonthComparisonRow(
+    label: String,
+    thisMonthValue: String,
+    lastMonthValue: String,
+    changePercent: Int,
+    isLowerBetter: Boolean,
+    isPercentageChange: Boolean = false
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 标签
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        ListDivider(startIndent = 0.dp)
+
+        // 数值和变化
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 上月值 → 本月值
+            Text(
+                text = "$lastMonthValue → $thisMonthValue",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            // 变化百分比
+            val changeText = when {
+                changePercent == 0 -> stringResource(R.string.month_no_change)
+                changePercent > 0 -> if (isPercentageChange) "↑${abs(changePercent)}%"
+                    else stringResource(R.string.month_change_increase, abs(changePercent))
+                else -> if (isPercentageChange) "↓${abs(changePercent)}%"
+                    else stringResource(R.string.month_change_decrease, abs(changePercent))
+            }
+
+            val changeColor = when {
+                changePercent == 0 -> MaterialTheme.colorScheme.onSurfaceVariant
+                isLowerBetter -> if (changePercent < 0) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.error
+                else -> if (changePercent > 0) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.error
+            }
+
+            Text(
+                text = changeText,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = changeColor
+            )
+        }
     }
 }

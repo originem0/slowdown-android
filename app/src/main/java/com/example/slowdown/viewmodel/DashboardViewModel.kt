@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.slowdown.R
 import com.example.slowdown.data.local.dao.AppStat
 import com.example.slowdown.data.local.dao.DailyStat
+import com.example.slowdown.data.local.dao.HourlyStat
 import com.example.slowdown.data.local.dao.SuccessRateStat
 import com.example.slowdown.data.local.entity.InterventionRecord
 import com.example.slowdown.data.repository.SlowDownRepository
@@ -32,6 +33,25 @@ enum class MindfulState {
 }
 
 /**
+ * 时段分布枚举
+ * 上午(6-11), 下午(12-17), 晚上(18-23), 深夜(0-5)
+ */
+enum class TimePeriod(val labelResId: Int, val hourRange: IntRange) {
+    MORNING(R.string.period_morning, 6..11),
+    AFTERNOON(R.string.period_afternoon, 12..17),
+    EVENING(R.string.period_evening, 18..23),
+    LATE_NIGHT(R.string.period_late_night, 0..5)
+}
+
+/**
+ * 时段统计数据
+ */
+data class PeriodStat(
+    val period: TimePeriod,
+    val count: Int
+)
+
+/**
  * 今日觉知时刻数据
  * 改为存储资源 ID 而非固定字符串，支持语言切换
  */
@@ -39,9 +59,10 @@ data class AwarenessMoment(
     val id: Long,
     val timeString: String,        // 时间戳字符串 (如 "18:12")
     val messageResId: Int,         // 觉知文案资源 ID
-    val messageArgs: Array<Any>,   // 格式化参数（如 appName）
+    val messageArgs: Array<Any>,   // 格式化参数（如 appName, waitTime）
     val appName: String,           // 涉及的应用名
     val userChoice: String,        // cancelled/continued/redirected
+    val actualWaitTime: Int,       // 实际等待时间（秒）
     val timestamp: Long
 ) {
     override fun equals(other: Any?): Boolean {
@@ -74,6 +95,10 @@ class DashboardViewModel(
     val serviceEnabled: StateFlow<Boolean> = repository.serviceEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    // 新增：平均决策时间（秒）
+    val averageDecisionTime: StateFlow<Float?> = repository.getTodayAverageDecisionTime()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     // 今日干预记录
     private val todayInterventions: StateFlow<List<InterventionRecord>> = repository.getTodayInterventions()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -94,13 +119,42 @@ class DashboardViewModel(
                 id = record.id,
                 timeString = formatTimestamp(record.timestamp),
                 messageResId = getAwarenessMessageResId(record),
-                messageArgs = arrayOf(record.appName),
+                messageArgs = arrayOf(record.appName, record.actualWaitTime),
                 appName = record.appName,
                 userChoice = record.userChoice,
+                actualWaitTime = record.actualWaitTime,
                 timestamp = record.timestamp
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // 今日全部觉知时刻（用于展开显示）
+    val allTodayMoments: StateFlow<List<AwarenessMoment>> = todayInterventions.map { records ->
+        records.map { record ->
+            AwarenessMoment(
+                id = record.id,
+                timeString = formatTimestamp(record.timestamp),
+                messageResId = getAwarenessMessageResId(record),
+                messageArgs = arrayOf(record.appName, record.actualWaitTime),
+                appName = record.appName,
+                userChoice = record.userChoice,
+                actualWaitTime = record.actualWaitTime,
+                timestamp = record.timestamp
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // 今日时段分布（聚合为4个时段）
+    val periodDistribution: StateFlow<List<PeriodStat>> = repository.getTodayHourlyDistribution()
+        .map { hourlyStats ->
+            TimePeriod.entries.map { period ->
+                val count = hourlyStats
+                    .filter { it.hour in period.hourRange }
+                    .sumOf { it.count }
+                PeriodStat(period, count)
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // MIUI 手动确认状态
     private val miuiAutoStartConfirmed: StateFlow<Boolean> = repository.miuiAutoStartConfirmed

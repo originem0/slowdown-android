@@ -15,7 +15,7 @@ import com.example.slowdown.data.local.entity.UsageRecord
 
 @Database(
     entities = [InterventionRecord::class, MonitoredApp::class, UsageRecord::class],
-    version = 4,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -74,6 +74,39 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // 从版本4迁移到版本5：添加性能优化索引
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // 为 intervention_records 表添加索引，优化时间范围查询性能
+                database.execSQL("""
+                    CREATE INDEX IF NOT EXISTS idx_intervention_timestamp
+                    ON intervention_records(timestamp)
+                """.trimIndent())
+
+                // 为 intervention_records 表添加复合索引，优化按应用查询性能
+                database.execSQL("""
+                    CREATE INDEX IF NOT EXISTS idx_intervention_package_time
+                    ON intervention_records(packageName, timestamp)
+                """.trimIndent())
+            }
+        }
+
+        // 从版本5迁移到版本6：修复索引缺失问题（幂等操作）
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // 确保索引存在（IF NOT EXISTS 保证幂等性）
+                database.execSQL("""
+                    CREATE INDEX IF NOT EXISTS idx_intervention_timestamp
+                    ON intervention_records(timestamp)
+                """.trimIndent())
+
+                database.execSQL("""
+                    CREATE INDEX IF NOT EXISTS idx_intervention_package_time
+                    ON intervention_records(packageName, timestamp)
+                """.trimIndent())
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -81,7 +114,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "slowdown_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)  // 降级时重建数据库，避免崩溃
                     .build()
                 INSTANCE = instance

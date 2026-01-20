@@ -9,11 +9,14 @@
     <string name="intercepts">次拦截</string>
     <string name="min_saved">分钟节省</string>
     <string name="success_rate">觉察率</string>
+    <string name="decision_time">决策时间</string>
+    <string name="seconds_short">秒</string>
     <string name="weekly_mindful_moments">本周趋势</string>
     <string name="most_intercepted">最常拦截</string>
     <string name="view_all_apps">查看全部应用</string>
     <string name="no_data_yet">暂无数据</string>
     <string name="weekly_total">本周总计</string>
+    <string name="weekly_interventions">拦截 %d 次</string>
     <string name="interrupts">次</string>
 
     <!-- App List -->
@@ -106,6 +109,14 @@
     <string name="compared_to_yesterday_less">比昨天少%s</string>
     <string name="this_month">本月</string>
     <string name="month_total_usage">本月总计使用时间</string>
+    <string name="month_comparison_title">本月 vs 上月同期</string>
+    <string name="month_usage_time">使用时长</string>
+    <string name="month_interventions">拦截次数</string>
+    <string name="month_success_rate">成功率</string>
+    <string name="month_change_increase">↑%d%%</string>
+    <string name="month_change_decrease">↓%d%%</string>
+    <string name="month_no_change">—</string>
+    <string name="month_no_last_data">暂无上月数据</string>
 
     <!-- Dashboard Awareness -->
     <string name="today_awareness_moments">今日觉知时刻</string>
@@ -251,8 +262,18 @@
     <string name="time_morning">上午</string>
     <string name="time_afternoon">下午</string>
     <string name="time_evening">晚上</string>
-    <string name="awareness_chose_leave">在 %s 前，你选择了离开</string>
-    <string name="awareness_continued_after_breath">深呼吸后，你继续使用了 %s</string>
-    <string name="awareness_chose_redirect">你选择了其他替代 %s</string>
-    <string name="awareness_paused_before">你在 %s 前暂停了一下</string>
+    <string name="awareness_chose_leave">在 %1$s 前等待 %2$d 秒，选择离开</string>
+    <string name="awareness_continued_after_breath">在 %1$s 前等待 %2$d 秒，继续使用</string>
+    <string name="awareness_chose_redirect">等待 %2$d 秒后，选择替代 %1$s</string>
+    <string name="awareness_paused_before">在 %1$s 前暂停了 %2$d 秒</string>
+    <string name="view_all_moments">查看全部</string>
+    <string name="collapse_moments">收起</string>
+
+    <!-- Time Period Distribution -->
+    <string name="period_morning">上午</string>
+    <string name="period_afternoon">下午</string>
+    <string name="period_evening">晚上</string>
+    <string name="period_late_night">深夜</string>
+    <string name="period_distribution_title">今日时段分布</string>
+    <string name="period_count">%d 次</string>
 </resources>

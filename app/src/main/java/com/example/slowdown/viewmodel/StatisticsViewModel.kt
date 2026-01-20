@@ -77,6 +77,10 @@ class StatisticsViewModel(
     private val _monthTotalMinutes = MutableStateFlow(0)
     val monthTotalMinutes: StateFlow<Int> = _monthTotalMinutes.asStateFlow()
 
+    // 月度对比数据
+    private val _monthComparison = MutableStateFlow<MonthComparisonData?>(null)
+    val monthComparison: StateFlow<MonthComparisonData?> = _monthComparison.asStateFlow()
+
     // 加载状态
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -174,6 +178,41 @@ class StatisticsViewModel(
                         // 获取所选日期所在月的开始日期
                         val monthStart = targetDate.withDayOfMonth(1)
 
+                        // 批量查询优化：收集所有需要查询的日期
+                        val datesToQuery = mutableSetOf<String>()
+                        datesToQuery.add(targetDateStr)
+                        datesToQuery.add(yesterdayStr)
+
+                        // 添加本周日期
+                        val today = LocalDate.now()
+                        for (dayOffset in 0L until 7L) {
+                            val date = weekStart.plusDays(dayOffset)
+                            if (date <= today) {
+                                datesToQuery.add(date.toString())
+                            }
+                        }
+
+                        // 添加本月日期
+                        val monthEndDate = if (targetDate > today) today else targetDate
+                        var monthDayOffset = 0L
+                        while (monthStart.plusDays(monthDayOffset) <= monthEndDate) {
+                            datesToQuery.add(monthStart.plusDays(monthDayOffset).toString())
+                            monthDayOffset++
+                        }
+
+                        // 添加上月同期日期
+                        val dayOfMonth = monthEndDate.dayOfMonth
+                        val lastMonthStart = monthStart.minusMonths(1)
+                        val lastMonthEnd = lastMonthStart.plusDays(dayOfMonth.toLong() - 1)
+                        var lastMonthDayOffset = 0L
+                        while (lastMonthStart.plusDays(lastMonthDayOffset) <= lastMonthEnd) {
+                            datesToQuery.add(lastMonthStart.plusDays(lastMonthDayOffset).toString())
+                            lastMonthDayOffset++
+                        }
+
+                        // 一次性批量查询所有日期的使用记录
+                        val usageRecordsMap = repository.getUsageRecordsByDates(datesToQuery.toList())
+
                         // 收集各应用目标日期数据
                         val todayAppUsages = mutableListOf<AppUsageData>()
                         var totalToday = 0
@@ -181,12 +220,12 @@ class StatisticsViewModel(
 
                         for (app in monitoredApps) {
                             // 目标日期数据
-                            val record = repository.getUsageRecord(app.packageName, targetDateStr)
+                            val record = usageRecordsMap["${app.packageName}_$targetDateStr"]
                             val minutes = record?.usageMinutes ?: 0
                             totalToday += minutes
 
                             // 前一天数据（用于对比）
-                            val yesterdayRecord = repository.getUsageRecord(app.packageName, yesterdayStr)
+                            val yesterdayRecord = usageRecordsMap["${app.packageName}_$yesterdayStr"]
                             totalYesterday += yesterdayRecord?.usageMinutes ?: 0
 
                             if (minutes > 0) {
@@ -207,18 +246,29 @@ class StatisticsViewModel(
                         _yesterdayTotalMinutes.value = totalYesterday
                         _todayUsageByApp.value = todayAppUsages.sortedByDescending { it.usageMinutes }
 
+                        // 获取本周拦截统计
+                        val weekStartMillis = weekStart.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        // 修复：使用周日结束时间，而不是下周一开始时间，避免排除当前周数据
+                        val weekEndDate = weekStart.plusDays(6)  // 周日
+                        val actualEndDate = if (weekEndDate > today) today else weekEndDate
+                        val weekEndMillis = actualEndDate.plusDays(1)  // 下一天 00:00:00，用于不包含边界查询
+                            .atStartOfDay(java.time.ZoneId.systemDefault())
+                            .toInstant()
+                            .toEpochMilli()
+                        val weeklyInterventions = repository.getDailyStatsBetween(weekStartMillis, weekEndMillis)
+                        val interventionsByDate = weeklyInterventions.associate { it.day to it.count }
+
                         // 收集本周每日数据（周一到周日，显示完整一周）
                         val weekDays = mutableListOf<DayUsageData>()
-                        val today = LocalDate.now()
                         for (dayOffset in 0L until 7L) {
                             val date = weekStart.plusDays(dayOffset)
                             val dateStr = date.toString()
                             var dayTotal = 0
 
-                            // 只有不超过今天的日期才有数据
+                            // 只有不超过今天的日期才有数据，使用批量查询的结果
                             if (date <= today) {
                                 for (app in monitoredApps) {
-                                    val record = repository.getUsageRecord(app.packageName, dateStr)
+                                    val record = usageRecordsMap["${app.packageName}_$dateStr"]
                                     dayTotal += record?.usageMinutes ?: 0
                                 }
                             }
@@ -228,25 +278,63 @@ class StatisticsViewModel(
                                     date = date,
                                     dayOfWeek = getDayOfWeekChinese(date.dayOfWeek),
                                     totalMinutes = dayTotal,
+                                    interventionCount = interventionsByDate[dateStr] ?: 0,
                                     isSelected = date == targetDate
                                 )
                             )
                         }
                         _weeklyUsage.value = weekDays
 
-                        // 计算本月总计（从月初到选择的日期或今天，取较小者）
-                        val monthEndDate = if (targetDate > today) today else targetDate
+                        // 计算本月总计（从月初到选择的日期或今天，取较小者）- 使用批量查询结果
                         var monthTotal = 0
-                        var monthDayOffset = 0L
+                        monthDayOffset = 0L
                         while (monthStart.plusDays(monthDayOffset) <= monthEndDate) {
                             val dateStr = monthStart.plusDays(monthDayOffset).toString()
                             for (app in monitoredApps) {
-                                val record = repository.getUsageRecord(app.packageName, dateStr)
+                                val record = usageRecordsMap["${app.packageName}_$dateStr"]
                                 monthTotal += record?.usageMinutes ?: 0
                             }
                             monthDayOffset++
                         }
                         _monthTotalMinutes.value = monthTotal
+
+                        // 计算上月同期使用时长 - 使用批量查询结果
+                        var lastMonthTotal = 0
+                        lastMonthDayOffset = 0L
+                        while (lastMonthStart.plusDays(lastMonthDayOffset) <= lastMonthEnd) {
+                            val dateStr = lastMonthStart.plusDays(lastMonthDayOffset).toString()
+                            for (app in monitoredApps) {
+                                val record = usageRecordsMap["${app.packageName}_$dateStr"]
+                                lastMonthTotal += record?.usageMinutes ?: 0
+                            }
+                            lastMonthDayOffset++
+                        }
+
+                        // 计算本月和上月同期的拦截统计
+                        val thisMonthStartMillis = monthStart.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        val thisMonthEndMillis = monthEndDate.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        val lastMonthStartMillis = lastMonthStart.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        val lastMonthEndMillis = lastMonthEnd.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+                        val thisMonthInterventions = repository.getCountBetween(thisMonthStartMillis, thisMonthEndMillis)
+                        val lastMonthInterventions = repository.getCountBetween(lastMonthStartMillis, lastMonthEndMillis)
+
+                        val thisMonthSuccessRateStat = repository.getSuccessRateBetween(thisMonthStartMillis, thisMonthEndMillis)
+                        val lastMonthSuccessRateStat = repository.getSuccessRateBetween(lastMonthStartMillis, lastMonthEndMillis)
+
+                        val thisMonthSuccessRate = if (thisMonthSuccessRateStat.total > 0)
+                            (thisMonthSuccessRateStat.successful * 100 / thisMonthSuccessRateStat.total) else 0
+                        val lastMonthSuccessRate = if (lastMonthSuccessRateStat.total > 0)
+                            (lastMonthSuccessRateStat.successful * 100 / lastMonthSuccessRateStat.total) else 0
+
+                        _monthComparison.value = MonthComparisonData(
+                            thisMonthUsage = monthTotal,
+                            lastMonthUsage = lastMonthTotal,
+                            thisMonthInterventions = thisMonthInterventions,
+                            lastMonthInterventions = lastMonthInterventions,
+                            thisMonthSuccessRate = thisMonthSuccessRate,
+                            lastMonthSuccessRate = lastMonthSuccessRate
+                        )
                         }
                         true // 返回成功标志
                     }
@@ -329,5 +417,22 @@ data class DayUsageData(
     val date: LocalDate,
     val dayOfWeek: String,
     val totalMinutes: Int,
+    val interventionCount: Int = 0,  // 拦截次数
     val isSelected: Boolean = false
 )
+
+/**
+ * 月度对比数据
+ */
+data class MonthComparisonData(
+    val thisMonthUsage: Int,      // 本月使用分钟数
+    val lastMonthUsage: Int,      // 上月同期使用分钟数
+    val thisMonthInterventions: Int,  // 本月拦截次数
+    val lastMonthInterventions: Int,  // 上月同期拦截次数
+    val thisMonthSuccessRate: Int,    // 本月成功率 (%)
+    val lastMonthSuccessRate: Int     // 上月同期成功率 (%)
+) {
+    val usageChange: Int get() = if (lastMonthUsage > 0) ((thisMonthUsage - lastMonthUsage) * 100 / lastMonthUsage) else 0
+    val interventionChange: Int get() = if (lastMonthInterventions > 0) ((thisMonthInterventions - lastMonthInterventions) * 100 / lastMonthInterventions) else 0
+    val successRateChange: Int get() = thisMonthSuccessRate - lastMonthSuccessRate
+}

@@ -51,6 +51,9 @@ class OverlayViewModel(
     fun recordAndFinish(userChoice: String) {
         viewModelScope.launch {
             val actualWaitTime = ((System.currentTimeMillis() - startTime) / 1000).toInt()
+            // 边界值验证：actualWaitTime应该在合理范围内（1-300秒）
+            val validatedWaitTime = actualWaitTime.coerceIn(1, 300)
+
             repository.recordIntervention(
                 InterventionRecord(
                     packageName = packageName,
@@ -59,7 +62,7 @@ class OverlayViewModel(
                     interventionType = "countdown",
                     userChoice = userChoice,
                     countdownDuration = initialCountdown,
-                    actualWaitTime = actualWaitTime
+                    actualWaitTime = validatedWaitTime
                 )
             )
         }

@@ -41,6 +41,8 @@ import com.example.slowdown.viewmodel.AwarenessMoment
 import com.example.slowdown.viewmodel.DashboardViewModel
 import com.example.slowdown.viewmodel.MindfulState
 import com.example.slowdown.viewmodel.PermissionState
+import com.example.slowdown.viewmodel.PeriodStat
+import com.example.slowdown.viewmodel.TimePeriod
 import androidx.compose.ui.res.stringResource
 import com.example.slowdown.R
 
@@ -57,6 +59,9 @@ fun DashboardScreen(
     val permissionState by viewModel.permissionState.collectAsState()
     val mindfulState by viewModel.mindfulState.collectAsState()
     val awarenessMoments by viewModel.awarenessMoments.collectAsState()
+    val allTodayMoments by viewModel.allTodayMoments.collectAsState()
+    val averageDecisionTime by viewModel.averageDecisionTime.collectAsState()
+    val periodDistribution by viewModel.periodDistribution.collectAsState()
 
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -142,71 +147,39 @@ fun DashboardScreen(
                 StatsOverview(
                     count = todayCount,
                     successRate = successRate,
-                    mindfulState = mindfulState
+                    mindfulState = mindfulState,
+                    averageDecisionTime = averageDecisionTime
                 )
             }
 
-            // Today's Awareness Moments Card
+            // Today's Awareness Moments Section - 无标题，轻量化展示
             if (awarenessMoments.isNotEmpty()) {
                 item {
-                    AwarenessMomentsCard(
+                    AwarenessMomentsSection(
                         moments = awarenessMoments,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        allMoments = allTodayMoments
                     )
                 }
             }
 
-            // Top Intercepted Apps
+            // Period Distribution Section - 已在卡片内含标题，无需外部标题
+            if (periodDistribution.isNotEmpty() && periodDistribution.any { it.count > 0 }) {
+                item {
+                    PeriodDistributionSection(periodStats = periodDistribution)
+                }
+            }
+
+            // Top Intercepted Apps Section - 卡片风格
             if (topApps.isNotEmpty()) {
                 item {
-                    SectionTitle(title = stringResource(R.string.most_intercepted), paddingTop = 16.dp)
-                }
-                item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ),
-                        border = UserBorder
-                    ) {
-                        Column {
-                            topApps.take(5).forEachIndexed { index, app ->
-                                TopAppItem(
-                                    app = app,
-                                    maxCount = topApps.first().count,
-                                    onClick = onNavigateToAppList,
-                                    showDivider = index < 4
-                                )
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable(onClick = onNavigateToAppList)
-                                    .padding(vertical = 12.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.view_all_apps),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-                    }
+                    TopAppsSection(
+                        topApps = topApps.take(5),
+                        onNavigateToAppList = onNavigateToAppList
+                    )
                 }
             }
         }
     }
-
-val UserBorder @Composable get() = androidx.compose.foundation.BorderStroke(
-    1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-)
-
 
 @Composable
 private fun StatusHeader(
@@ -287,12 +260,24 @@ private fun StatusHeader(
 }
 
 @Composable
-private fun StatsOverview(count: Int, successRate: SuccessRateStat, mindfulState: MindfulState) {
+private fun StatsOverview(
+    count: Int,
+    successRate: SuccessRateStat,
+    mindfulState: MindfulState,
+    averageDecisionTime: Float?
+) {
     // 计算成功率百分比
     val successPercent = if (successRate.total > 0) {
         (successRate.successful * 100 / successRate.total)
     } else {
         0
+    }
+
+    // 格式化决策时间
+    val decisionTimeText = if (averageDecisionTime != null) {
+        String.format("%.1f", averageDecisionTime) + stringResource(R.string.seconds_short)
+    } else {
+        "--"
     }
 
     Column(
@@ -306,31 +291,48 @@ private fun StatsOverview(count: Int, successRate: SuccessRateStat, mindfulState
 
         Spacer(modifier = Modifier.height(16.dp)) // Reduced spacer
 
-        // Stats Row
+        // Stats Row - 三个指标
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             StatItem(
                 value = count.toString(),
                 label = stringResource(R.string.intercepts),
-                icon = null
+                icon = null,
+                modifier = Modifier.weight(1f)
             )
 
             Box(
                 modifier = Modifier
-                    .height(40.dp)
+                    .height(32.dp)
                     .width(1.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant)
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     .align(Alignment.CenterVertically)
             )
 
             StatItem(
                 value = "$successPercent%",
                 label = stringResource(R.string.success_rate),
-                icon = null
+                icon = null,
+                modifier = Modifier.weight(1f)
+            )
+
+            Box(
+                modifier = Modifier
+                    .height(32.dp)
+                    .width(1.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    .align(Alignment.CenterVertically)
+            )
+
+            StatItem(
+                value = decisionTimeText,
+                label = stringResource(R.string.decision_time),
+                icon = null,
+                modifier = Modifier.weight(1f)
             )
         }
 
@@ -339,18 +341,26 @@ private fun StatsOverview(count: Int, successRate: SuccessRateStat, mindfulState
 }
 
 @Composable
-private fun StatItem(value: String, label: String, icon: Any?) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun StatItem(
+    value: String,
+    label: String,
+    icon: Any?,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+    ) {
         Text(
             text = value,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
         )
     }
 }
@@ -455,7 +465,7 @@ private fun MindfulBreathingCircle(mindfulState: MindfulState) {
                 .scale(scaleX = horizontalStretch, scaleY = 1f)
         ) {
             val center = this.center
-            val baseRadius = size.minDimension / 2.8f
+            val baseRadius = size.minDimension / 2.3f  // 扩大内部圈
 
             // 1. Outermost diffuse haze - creates boundaryless effect
             drawCircle(
@@ -535,65 +545,172 @@ private fun MindfulBreathingCircle(mindfulState: MindfulState) {
 }
 
 /**
- * 今日觉知时刻卡片 - 简约融入背景
+ * 今日觉知时刻列表 - 轻量化卡片风格，支持展开/收起
  */
 @Composable
-private fun AwarenessMomentsCard(
+private fun AwarenessMomentsSection(
     moments: List<AwarenessMoment>,
-    modifier: Modifier = Modifier
+    allMoments: List<AwarenessMoment>
 ) {
-    // Subtle colors that blend with background
-    val textColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val timeColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+    // 展开状态
+    var isExpanded by remember { mutableStateOf(false) }
+    val displayMoments = if (isExpanded) allMoments else moments
+    val hasMoreMoments = allMoments.size > 3
 
-    Column(
-        modifier = modifier
+    Card(
+        modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        // Moments list - no title, just content
-        moments.forEachIndexed { index, moment ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp, horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Leaf icon
-                Text(
-                    text = "🌿",
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
+        Column(
+            modifier = Modifier.padding(vertical = 12.dp)
+        ) {
+            displayMoments.forEach { moment ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Leaf icon - 小一点
+                    Text(
+                        text = "🌿",
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(end = 10.dp)
+                    )
 
-                // Time badge - 直接显示时间戳
-                Text(
-                    text = moment.timeString,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = timeColor,
-                    fontWeight = FontWeight.Medium
-                )
+                    // Time - 小字体，淡色
+                    Text(
+                        text = moment.timeString,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.width(42.dp)
+                    )
 
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Message - 使用资源 ID 和参数动态获取字符串
-                Text(
-                    text = stringResource(moment.messageResId, *moment.messageArgs),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = textColor,
-                    lineHeight = 18.sp,
-                    modifier = Modifier.weight(1f)
-                )
+                    // Message - 小字体，淡色
+                    Text(
+                        text = stringResource(moment.messageResId, *moment.messageArgs),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
-            // Subtle divider (except for last item)
-            if (index < moments.size - 1) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 40.dp, end = 16.dp),
-                    thickness = 0.5.dp,
-                    color = dividerColor
-                )
+            // Expand/Collapse button
+            if (hasMoreMoments) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isExpanded = !isExpanded }
+                        .padding(top = 8.dp, bottom = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(
+                            if (isExpanded) R.string.collapse_moments else R.string.view_all_moments
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 时段分布 - 轻量化卡片风格，显示4个时段的拦截次数分布
+ */
+@Composable
+private fun PeriodDistributionSection(periodStats: List<PeriodStat>) {
+    val maxCount = periodStats.maxOfOrNull { it.count } ?: 0
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 12.dp)
+        ) {
+            // 小标题
+            Text(
+                text = stringResource(R.string.period_distribution_title),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+
+            periodStats.forEach { stat ->
+                val progress = if (maxCount > 0) stat.count.toFloat() / maxCount else 0f
+                val isMax = stat.count == maxCount && maxCount > 0
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Period label - 小字体
+                    Text(
+                        text = stringResource(stat.period.labelResId),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        modifier = Modifier.width(48.dp)
+                    )
+
+                    // Progress bar - 更细更圆润
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(surfaceVariant.copy(alpha = 0.6f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(progress)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(primaryColor.copy(alpha = 0.7f))
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    // Count - 小字体
+                    Text(
+                        text = stringResource(R.string.period_count, stat.count),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.width(42.dp)
+                    )
+
+                    // Fire icon for max
+                    if (isMax) {
+                        Text(
+                            text = "🔥",
+                            fontSize = 12.sp
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.width(16.dp))
+                    }
+                }
             }
         }
     }
@@ -605,82 +722,132 @@ private fun BreathingCircle(count: Int) {
     MindfulBreathingCircle(mindfulState = MindfulState.CALM)
 }
 
+/**
+ * 最常拦截应用 - 卡片风格
+ */
+@Composable
+private fun TopAppsSection(
+    topApps: List<AppStat>,
+    onNavigateToAppList: () -> Unit
+) {
+    val maxCount = topApps.firstOrNull()?.count ?: 0
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 12.dp)
+        ) {
+            // 小标题
+            Text(
+                text = stringResource(R.string.most_intercepted),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+
+            topApps.forEach { app ->
+                TopAppItem(
+                    app = app,
+                    maxCount = maxCount,
+                    onClick = onNavigateToAppList
+                )
+            }
+
+            // 查看全部按钮
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onNavigateToAppList)
+                    .padding(top = 8.dp, bottom = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.view_all_apps),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
 
 @Composable
 private fun TopAppItem(
     app: AppStat,
     maxCount: Int,
-    onClick: () -> Unit,
-    showDivider: Boolean
+    onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // App initial circle
+        // App initial circle - 小一点
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(32.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondaryContainer),
+                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)),
             contentAlignment = Alignment.Center
         ) {
-             Text(
+            Text(
                 text = app.appName.take(1).uppercase(),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSecondaryContainer
             )
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = app.appName,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            // Custom Progress Bar
+
+            Spacer(modifier = Modifier.height(3.dp))
+
+            // Progress Bar - 更细
             val progress = if (maxCount > 0) app.count.toFloat() / maxCount else 0f
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.6f)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(1.5.dp))
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(progress)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(MaterialTheme.colorScheme.secondary)
+                        .clip(RoundedCornerShape(1.5.dp))
+                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f))
                 )
             }
         }
 
         Text(
             text = "${app.count}",
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-    
-    if (showDivider) {
-        HorizontalDivider(
-            modifier = Modifier.padding(start = 72.dp),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
     }
 }

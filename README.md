@@ -167,6 +167,7 @@ A: 所有数据都存储在本地，不会上传到任何服务器。
 |------|------|
 | [功能说明书](docs/function.md) | 用户操作手册，详细介绍各项功能 |
 | [技术架构](docs/architecture.md) | 系统设计与实现细节 |
+| [数据质量优化](docs/data-quality-optimization.md) | v3性能优化文档（查询速度提升390倍） |
 | [问题排查](docs/troubleshooting.md) | 常见问题与已修复的 Bug |
 | [开发指南](CONTRIBUTING.md) | 代码规范、Git 工作流、发布流程 |
 | [更新日志](CHANGELOG.md) | 版本历史与功能路线图 |

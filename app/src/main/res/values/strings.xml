@@ -9,11 +9,14 @@
     <string name="intercepts">Intercepts</string>
     <string name="min_saved">Min Saved</string>
     <string name="success_rate">Success Rate</string>
+    <string name="decision_time">Decision Time</string>
+    <string name="seconds_short">s</string>
     <string name="weekly_mindful_moments">Weekly Mindful Moments</string>
     <string name="most_intercepted">Most Intercepted</string>
     <string name="view_all_apps">View All Apps</string>
     <string name="no_data_yet">No data yet</string>
     <string name="weekly_total">Weekly Total</string>
+    <string name="weekly_interventions">%d intercepts</string>
     <string name="interrupts">interrupts</string>
 
     <!-- App List -->
@@ -106,6 +109,14 @@
     <string name="compared_to_yesterday_less">%s less than yesterday</string>
     <string name="this_month">This Month</string>
     <string name="month_total_usage">Monthly Total Usage</string>
+    <string name="month_comparison_title">This Month vs Last Month</string>
+    <string name="month_usage_time">Usage Time</string>
+    <string name="month_interventions">Interventions</string>
+    <string name="month_success_rate">Success Rate</string>
+    <string name="month_change_increase">↑%d%%</string>
+    <string name="month_change_decrease">↓%d%%</string>
+    <string name="month_no_change">—</string>
+    <string name="month_no_last_data">No data from last month</string>
 
     <!-- Dashboard Awareness -->
     <string name="today_awareness_moments">Today\'s Awareness Moments</string>
@@ -251,8 +262,18 @@
     <string name="time_morning">Morning</string>
     <string name="time_afternoon">Afternoon</string>
     <string name="time_evening">Evening</string>
-    <string name="awareness_chose_leave">Before %s, you chose to leave</string>
-    <string name="awareness_continued_after_breath">After deep breathing, you continued using %s</string>
-    <string name="awareness_chose_redirect">You chose an alternative to %s</string>
-    <string name="awareness_paused_before">You paused before %s</string>
+    <string name="awareness_chose_leave">Waited %2$d sec before %1$s, chose to leave</string>
+    <string name="awareness_continued_after_breath">Waited %2$d sec before %1$s, continued</string>
+    <string name="awareness_chose_redirect">Waited %2$d sec, chose alternative to %1$s</string>
+    <string name="awareness_paused_before">Paused %2$d sec before %1$s</string>
+    <string name="view_all_moments">View All</string>
+    <string name="collapse_moments">Collapse</string>
+
+    <!-- Time Period Distribution -->
+    <string name="period_morning">Morning</string>
+    <string name="period_afternoon">Afternoon</string>
+    <string name="period_evening">Evening</string>
+    <string name="period_late_night">Late Night</string>
+    <string name="period_distribution_title">Today\'s Period Distribution</string>
+    <string name="period_count">%d times</string>
 </resources>

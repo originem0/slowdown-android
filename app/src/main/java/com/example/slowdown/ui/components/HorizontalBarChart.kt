@@ -23,7 +23,9 @@ data class BarData(
     val label: String,       // "周一"
     val value: Float,        // 分钟数
     val displayText: String, // "2h"
-    val isSelected: Boolean = false
+    val isSelected: Boolean = false,
+    val secondaryValue: Int = 0,  // 拦截次数
+    val secondaryText: String = "" // "3次"
 )
 
 /**
@@ -136,5 +138,17 @@ private fun HorizontalBarItem(
             modifier = Modifier.width(48.dp),
             textAlign = TextAlign.End
         )
+
+        // 拦截次数（如果有）
+        if (data.secondaryText.isNotEmpty()) {
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = data.secondaryText,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.width(32.dp),
+                textAlign = TextAlign.End
+            )
+        }
     }
 }
