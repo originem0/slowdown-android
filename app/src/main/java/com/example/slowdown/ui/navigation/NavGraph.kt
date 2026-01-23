@@ -29,6 +29,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.sharonZ.slowdown.R
 import com.sharonZ.slowdown.data.repository.SlowDownRepository
+import com.sharonZ.slowdown.ui.screen.AboutScreen
 import com.sharonZ.slowdown.ui.screen.AppDetailScreen
 import com.sharonZ.slowdown.ui.screen.AppListScreen
 import com.sharonZ.slowdown.ui.screen.DashboardScreen
@@ -48,6 +49,7 @@ sealed class Screen(val route: String) {
     data object AppList : Screen("app_list")
     data object Statistics : Screen("statistics")
     data object Settings : Screen("settings")
+    data object About : Screen("about")
     data object AppDetail : Screen("app_detail/{packageName}") {
         fun createRoute(packageName: String): String {
             val encoded = URLEncoder.encode(packageName, StandardCharsets.UTF_8.toString())
@@ -147,6 +149,13 @@ fun SlowDownNavGraph(
                 )
                 SettingsScreen(
                     viewModel = viewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToAbout = { navController.navigate(Screen.About.route) }
+                )
+            }
+
+            composable(Screen.About.route) {
+                AboutScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

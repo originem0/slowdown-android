@@ -276,4 +276,34 @@
     <string name="period_late_night">Late Night</string>
     <string name="period_distribution_title">Today\'s Period Distribution</string>
     <string name="period_count">%d times</string>
+
+    <!-- About Screen -->
+    <string name="about_section">About</string>
+    <string name="about_title">About</string>
+    <string name="about_subtitle">Version, developer info &amp; more</string>
+    <string name="about_version">Version %s</string>
+    <string name="about_tagline">Mindful moments, one breath at a time</string>
+    <string name="about_developer_section">Developer</string>
+    <string name="about_developer">Developer</string>
+    <string name="about_developer_name">sharonZ</string>
+    <string name="about_contact">Contact</string>
+    <string name="about_email">sharonzhi@foxmail.com</string>
+    <string name="about_send_email">Send Email</string>
+    <string name="about_github">GitHub</string>
+    <string name="about_github_url">https://github.com/chaoscalm/SlowDown</string>
+    <string name="about_links_section">Links</string>
+    <string name="about_rate">Rate the App</string>
+    <string name="about_rate_subtitle">Share your feedback on the app store</string>
+    <string name="about_share">Share</string>
+    <string name="about_share_subtitle">Recommend SlowDown to friends</string>
+    <string name="about_share_text">Try SlowDown - a mindful app that helps you take a breath before opening distracting apps. Download: https://play.google.com/store/apps/details?id=com.sharonZ.slowdown</string>
+    <string name="about_legal_section">Legal</string>
+    <string name="about_privacy">Privacy Policy</string>
+    <string name="about_privacy_subtitle">How we handle your data</string>
+    <string name="about_terms">Terms of Service</string>
+    <string name="about_terms_subtitle">Usage terms and conditions</string>
+    <string name="about_licenses">Open Source Licenses</string>
+    <string name="about_licenses_subtitle">Third-party libraries we use</string>
+    <string name="about_copyright">© 2025 sharonZ</string>
+    <string name="about_made_with_love">Made with ❤️</string>
 </resources>

@@ -110,6 +110,9 @@ class UsageTrackingManager(
      * 使用 queryEvents() 获取准确的实时数据，而非 queryUsageStats(INTERVAL_DAILY) 的延迟聚合数据
      */
     suspend fun syncUsageStats() {
+        // Bug fix #4: 同步前先 flush 实时追踪缓冲区，避免数据丢失
+        flushRealtimeBuffer()
+
         val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
         if (usageStatsManager == null) {
             Log.e(TAG, "UsageStatsManager not available")
@@ -299,6 +302,39 @@ class UsageTrackingManager(
         currentTrackingPackage = null
         trackingStartTime = 0
         accumulatedRealtimeMs = 0
+    }
+
+    /**
+     * Bug fix #4: 将实时追踪缓冲区中的数据写入数据库
+     * 在同步 UsageStats 之前调用，确保本地追踪的数据不会丢失
+     */
+    private suspend fun flushRealtimeBuffer() {
+        if (!isRealtimeTrackingEnabled || currentTrackingPackage == null) return
+
+        val packageName = currentTrackingPackage ?: return
+
+        // 计算从 trackingStartTime 到现在的时间，加到缓冲区
+        if (trackingStartTime > 0) {
+            val currentDuration = System.currentTimeMillis() - trackingStartTime
+            if (currentDuration > 0) {
+                accumulatedRealtimeMs += currentDuration
+                trackingStartTime = System.currentTimeMillis()  // 重置起点
+            }
+        }
+
+        // 如果缓冲区有足够数据，写入数据库
+        if (accumulatedRealtimeMs >= 60000) {
+            val todayDate = java.time.LocalDate.now().toString()
+            val existingRecord = repository.getUsageRecord(packageName, todayDate)
+            val currentMinutes = existingRecord?.usageMinutes ?: 0
+
+            val additionalMinutes = (accumulatedRealtimeMs / 60000).toInt()
+            val newTotalMinutes = currentMinutes + additionalMinutes
+            accumulatedRealtimeMs %= 60000
+
+            Log.d(TAG, "flushRealtimeBuffer: Writing $additionalMinutes minutes for $packageName (total: $newTotalMinutes)")
+            repository.updateUsageMinutes(packageName, newTotalMinutes)
+        }
     }
 
     /**

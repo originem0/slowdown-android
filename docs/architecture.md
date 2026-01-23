@@ -69,6 +69,26 @@ AccessibilityService 实现，系统核心入口。
 | `cooldownMap` | ConcurrentHashMap<String, Long> | 应用冷却时间记录 |
 | `shownLimitWarningToday` | MutableSet<String> | 今日已显示100%警告的应用 |
 | `currentVideoApp` | String? | 当前定时检查的视频应用 |
+| `serviceEnabled` | Flow<Boolean> | 服务启用状态（响应式监听） |
+
+**状态监听**：
+
+```kotlin
+// 监听服务启用状态变化，禁用时清除所有状态
+private fun startServiceEnabledWatcher() {
+    serviceScope.launch {
+        repository.serviceEnabled.collect { enabled ->
+            if (!enabled) {
+                cooldownMap.clear()
+                lastCheckTime.clear()
+                shownLimitWarningToday.clear()
+                stopVideoAppCheck()
+                currentForegroundApp = null
+            }
+        }
+    }
+}
+```
 
 **事件处理流程**：
 
@@ -95,6 +115,7 @@ checkAndShowUsageWarning（触发干预判定）
 - 动态调整同步间隔
 - 实时追踪高使用率应用
 - 计算警告类型
+- 缓冲区数据刷新（同步前保护实时追踪数据）
 
 **同步策略**：
 - 默认间隔：5 分钟
@@ -104,6 +125,25 @@ checkAndShowUsageWarning（触发干预判定）
 - 触发条件：使用 ≥ 70% 限额
 - 精度：记录应用内实际停留时长
 - 缓冲：不足 1 分钟的时间累积后批量更新
+
+**缓冲区刷新**（Bug fix #4）：
+
+```kotlin
+// 同步前先 flush 实时追踪缓冲区，避免数据丢失
+suspend fun syncUsageStats() {
+    flushRealtimeBuffer()  // 先写入缓冲数据
+    // ... 然后执行同步
+}
+
+private suspend fun flushRealtimeBuffer() {
+    if (!isRealtimeTrackingEnabled || currentTrackingPackage == null) return
+    // 计算并写入累积时间
+    if (accumulatedRealtimeMs >= 60000) {
+        repository.updateUsageMinutes(packageName, newTotalMinutes)
+        accumulatedRealtimeMs %= 60000
+    }
+}
+```
 
 ### 3. OverlayActivity
 
@@ -124,7 +164,7 @@ checkAndShowUsageWarning（触发干预判定）
 
 ### 4. UsageWarningActivity
 
-**文件位置**：`ui/overlay/UsageWarningActivity.kt`
+**文件位置**：`ui/warning/UsageWarningActivity.kt`
 
 强制关闭警告界面。
 
@@ -135,6 +175,32 @@ checkAndShowUsageWarning（触发干预判定）
 **特点**：
 - 无"继续使用"选项
 - 按返回键强制返回桌面
+- 使用缓存语言设置，避免 ANR 风险
+
+**语言设置优化**（Bug fix #8）：
+
+```kotlin
+override fun attachBaseContext(newBase: Context?) {
+    // 使用缓存的语言设置，避免 runBlocking 导致的 ANR 风险
+    val app = newBase.applicationContext as? SlowDownApp
+    val language = app?.cachedLanguage ?: "en"
+    val localizedContext = LocaleHelper.setLocale(newBase, language)
+    super.attachBaseContext(localizedContext)
+}
+```
+
+### 5. AboutScreen（关于页面）
+
+**文件位置**：`ui/settings/AboutScreen.kt`
+
+应用信息与开发者联系页面。
+
+**功能**：
+- 显示应用版本信息
+- 开发者联系方式（邮箱、GitHub）
+- 功能建议与 Bug 反馈链接
+- 隐私政策与服务条款链接
+- 感谢与声明信息
 
 ---
 
@@ -372,6 +438,59 @@ data class InterventionRecord(
 
 ---
 
+## 内存管理与协程安全
+
+### Handler 复用
+
+避免每次操作创建新 Handler，复用类级别实例：
+
+```kotlin
+// 错误：每次创建新 Handler
+val handler = Handler(Looper.getMainLooper())
+handler.post { ... }
+
+// 正确：复用类级别 handler
+private val videoAppCheckHandler = Handler(Looper.getMainLooper())
+videoAppCheckHandler.post { ... }
+```
+
+### 协程取消检查
+
+无限循环协程必须检查 `isActive` 状态：
+
+```kotlin
+// 错误：delay 后不检查取消状态
+serviceScope.launch {
+    while (true) {
+        delay(INTERVAL)
+        cleanupStaleMaps()  // scope 取消后仍可能执行
+    }
+}
+
+// 正确：使用 isActive 检查
+serviceScope.launch {
+    while (isActive) {
+        delay(INTERVAL)
+        if (isActive) {
+            cleanupStaleMaps()
+        }
+    }
+}
+```
+
+### 缓冲区同步保护
+
+多个数据源写入同一位置时，必须考虑同步顺序：
+
+```kotlin
+suspend fun syncUsageStats() {
+    flushRealtimeBuffer()  // 先写入实时追踪缓冲
+    // ... 然后从 UsageStatsManager 同步
+}
+```
+
+---
+
 ## 边缘情况处理
 
 ### 1. rootInActiveWindow 返回 null
@@ -420,4 +539,4 @@ private fun launchDeepBreathOverlay(packageName: String) {
 
 ---
 
-*最后更新：2026-01-20*
+*最后更新：2026-01-23*

@@ -359,6 +359,120 @@ when {
 | `launchDeepBreathOverlay` | 弹窗启动验证 | 已处理 |
 | `launchUsageWarningActivity` | 强制关闭验证 | 已处理 |
 
+### Bug 7：服务禁用后弹窗仍然显示
+
+**修复日期**：2026-01-23
+
+**问题**：用户关闭总开关后，弹窗仍然出现。
+
+**原因**：`serviceEnabled` 检查只存在于 `handleAppLaunch()` 方法中，其他触发路径（实时追踪、视频应用检查、同步回调）没有检查服务状态。
+
+**解决**：
+1. 在所有弹窗触发路径添加 `serviceEnabled` 检查
+2. 添加 `serviceEnabled` Flow 监听，禁用时清除所有状态：
+```kotlin
+private fun startServiceEnabledWatcher() {
+    serviceScope.launch {
+        repository.serviceEnabled.collect { enabled ->
+            if (!enabled) {
+                cooldownMap.clear()
+                lastCheckTime.clear()
+                shownLimitWarningToday.clear()
+                stopVideoAppCheck()
+            }
+        }
+    }
+}
+```
+3. 在 OverlayViewModel.recordAndFinish() 中添加服务状态检查
+
+**教训**：服务状态检查必须覆盖所有可能的触发路径。
+
 ---
 
-*最后更新：2026-01-20*
+### Bug 8：runBlocking 导致 ANR 风险
+
+**修复日期**：2026-01-23
+
+**问题**：UsageWarningActivity 在 `attachBaseContext` 中使用 `runBlocking` 阻塞主线程。
+
+**原因**：`runBlocking` 会阻塞当前线程等待协程完成，在 Activity 创建时可能导致 ANR。
+
+**解决**：使用 `SlowDownApp.cachedLanguage` 缓存的语言设置，避免 I/O 操作：
+```kotlin
+override fun attachBaseContext(newBase: Context?) {
+    val app = newBase.applicationContext as? SlowDownApp
+    val language = app?.cachedLanguage ?: "en"
+    val localizedContext = LocaleHelper.setLocale(newBase, language)
+    super.attachBaseContext(localizedContext)
+}
+```
+
+**教训**：Activity 生命周期方法中绝对不能使用 `runBlocking`。
+
+---
+
+### Bug 9：Handler 内存泄漏
+
+**修复日期**：2026-01-23
+
+**问题**：`launchUsageWarningActivity` 中每次创建新的 Handler 实例。
+
+**原因**：临时创建的 Handler 会持有 Activity 引用，可能导致内存泄漏。
+
+**解决**：复用类级别的 `videoAppCheckHandler`：
+```kotlin
+// 之前：每次创建新 Handler
+val handler = Handler(Looper.getMainLooper())
+
+// 之后：复用类级别 handler
+videoAppCheckHandler.post { moveSlowDownToFront() }
+```
+
+**教训**：Handler 应该在类级别定义并在 onDestroy 中清理。
+
+---
+
+### Bug 10：协程无限循环泄漏
+
+**修复日期**：2026-01-23
+
+**问题**：`startMapCleanupTask` 中的 `while(true)` 循环在服务销毁后可能继续运行。
+
+**原因**：协程中的 `while(true)` 没有检查 `isActive`，即使 scope 被取消，delay 之后的代码仍可能执行。
+
+**解决**：使用 `isActive` 检查：
+```kotlin
+serviceScope.launch {
+    while (isActive) {
+        delay(MAP_CLEANUP_INTERVAL_MS)
+        if (isActive) cleanupStaleMaps()
+    }
+}
+```
+
+**教训**：协程无限循环必须使用 `isActive` 检查。
+
+---
+
+### Bug 11：同步时实时追踪数据丢失
+
+**修复日期**：2026-01-23
+
+**问题**：定期同步 UsageStats 时，实时追踪缓冲区的数据可能被覆盖。
+
+**原因**：`syncUsageStats()` 会重新计算使用时间并覆盖数据库，但实时追踪的 `accumulatedRealtimeMs` 缓冲区数据未被包含。
+
+**解决**：在同步前 flush 缓冲区：
+```kotlin
+suspend fun syncUsageStats() {
+    flushRealtimeBuffer()  // 先写入缓冲数据
+    // ... 然后执行同步
+}
+```
+
+**教训**：多个数据源写入同一位置时，必须考虑同步顺序。
+
+---
+
+*最后更新：2026-01-23*

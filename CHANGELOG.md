@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Custom reminder text setting - users can add personal motivational messages
 - Per-app cooldown settings - individual apps can have custom cooldown periods
+- **About page** - new settings page with version info, developer contact, links, and legal information
 
 ### Changed
 - Removed OverlayService, unified overlay launch to use OverlayActivity directly
@@ -16,6 +17,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 - Improved stability and code quality (database downgrade protection, memory management)
+- **Bug fix #1**: Service toggle now properly stops all overlay popups when disabled
+- **Bug fix #3**: Cooldown maps are now cleared when service is disabled (clean state on re-enable)
+- **Bug fix #4**: Realtime tracking buffer is flushed before sync to prevent data loss
+- **Bug fix #5**: Fixed Handler memory leak in AppMonitorService
+- **Bug fix #6**: Fixed infinite loop coroutine leak (proper isActive check)
+- **Bug fix #7**: Added try-catch for app launch to prevent crashes
+- **Bug fix #8**: Removed runBlocking ANR risk in UsageWarningActivity (use cached language)
 
 ---
 
@@ -53,6 +61,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ---
 
 ## Development History
+
+### 2026-01-23
+- `fix: comprehensive bug fixes for service toggle, memory leaks, and ANR risks`
+- `feat: add About page with developer info and legal links`
 
 ### 2026-01-20
 - `fix: improve stability and code quality`

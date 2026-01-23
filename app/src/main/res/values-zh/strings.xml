@@ -276,4 +276,34 @@
     <string name="period_late_night">深夜</string>
     <string name="period_distribution_title">今日时段分布</string>
     <string name="period_count">%d 次</string>
+
+    <!-- About Screen -->
+    <string name="about_section">关于</string>
+    <string name="about_title">关于</string>
+    <string name="about_subtitle">版本信息、开发者等</string>
+    <string name="about_version">版本 %s</string>
+    <string name="about_tagline">一次深呼吸，一个正念时刻</string>
+    <string name="about_developer_section">开发者</string>
+    <string name="about_developer">开发者</string>
+    <string name="about_developer_name">sharonZ</string>
+    <string name="about_contact">联系方式</string>
+    <string name="about_email">sharonzhi@foxmail.com</string>
+    <string name="about_send_email">发送邮件</string>
+    <string name="about_github">GitHub</string>
+    <string name="about_github_url">https://github.com/chaoscalm/SlowDown</string>
+    <string name="about_links_section">链接</string>
+    <string name="about_rate">给应用评分</string>
+    <string name="about_rate_subtitle">在应用商店分享你的反馈</string>
+    <string name="about_share">分享</string>
+    <string name="about_share_subtitle">推荐 SlowDown 给朋友</string>
+    <string name="about_share_text">试试 SlowDown - 一款正念应用，帮你在打开分心应用前深呼吸。下载: https://play.google.com/store/apps/details?id=com.sharonZ.slowdown</string>
+    <string name="about_legal_section">法律信息</string>
+    <string name="about_privacy">隐私政策</string>
+    <string name="about_privacy_subtitle">我们如何处理你的数据</string>
+    <string name="about_terms">服务条款</string>
+    <string name="about_terms_subtitle">使用条款和条件</string>
+    <string name="about_licenses">开源许可</string>
+    <string name="about_licenses_subtitle">我们使用的第三方库</string>
+    <string name="about_copyright">© 2025 sharonZ</string>
+    <string name="about_made_with_love">用 ❤️ 制作</string>
 </resources>

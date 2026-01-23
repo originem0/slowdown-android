@@ -33,7 +33,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToAbout: () -> Unit
 ) {
     val defaultCountdown by viewModel.defaultCountdown.collectAsState()
     val cooldownMinutes by viewModel.cooldownMinutes.collectAsState()
@@ -228,6 +229,15 @@ fun SettingsScreen(
                 onToggle = { viewModel.toggleLanguage() }
             )
             ListDivider(startIndent = 0.dp)
+        }
+
+        // 关于
+        item {
+            SectionTitle(title = stringResource(R.string.about_section), paddingTop = 8.dp)
+        }
+
+        item {
+            AboutSettingItem(onClick = onNavigateToAbout)
         }
 
         item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -856,4 +866,44 @@ private fun CustomReminderTextItem(
     ListDivider(startIndent = 16.dp)
 }
 
+@Composable
+private fun AboutSettingItem(
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Info,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(24.dp)
+        )
 
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.about_title),
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = stringResource(R.string.about_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Icon(
+            imageVector = Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}

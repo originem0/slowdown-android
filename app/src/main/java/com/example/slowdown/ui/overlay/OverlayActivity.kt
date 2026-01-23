@@ -134,12 +134,20 @@ class OverlayActivity : ComponentActivity() {
                     customReminderText = customReminderText,
                     onContinue = {
                         viewModel.recordAndFinish("continued")
-                        PackageUtils.launchApp(this, packageName)
+                        try {
+                            PackageUtils.launchApp(this, packageName)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "[Overlay] Failed to launch app $packageName: ${e.message}")
+                        }
                         finish()
                     },
                     onRedirect = { redirectPkg ->
                         viewModel.recordAndFinish("redirected")
-                        PackageUtils.launchApp(this, redirectPkg)
+                        try {
+                            PackageUtils.launchApp(this, redirectPkg)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "[Overlay] Failed to launch redirect app $redirectPkg: ${e.message}")
+                        }
                         finish()
                     },
                     onCancel = {

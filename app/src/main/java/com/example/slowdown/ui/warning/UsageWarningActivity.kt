@@ -30,9 +30,6 @@ import com.sharonZ.slowdown.service.UsageWarningType
 import com.sharonZ.slowdown.ui.theme.*
 import com.sharonZ.slowdown.util.LocaleHelper
 import com.sharonZ.slowdown.util.PackageUtils
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.PI
 import kotlin.math.cos
 
@@ -58,17 +55,9 @@ class UsageWarningActivity : ComponentActivity() {
             return
         }
 
-        // Get the saved language preference synchronously
+        // Bug fix #8: 使用缓存的语言设置，避免 runBlocking 导致的 ANR 风险
         val app = newBase.applicationContext as? SlowDownApp
-        val language = if (app != null) {
-            runBlocking {
-                withTimeoutOrNull(1000L) {  // 1 second timeout
-                    app.userPreferences.appLanguage.first()
-                } ?: "en"  // Default to English if timeout
-            }
-        } else {
-            "en"
-        }
+        val language = app?.cachedLanguage ?: "en"
 
         val localizedContext = LocaleHelper.setLocale(newBase, language)
         super.attachBaseContext(localizedContext)

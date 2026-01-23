@@ -84,6 +84,14 @@ class AppMonitorService : AccessibilityService() {
             // 检查是否需要触发弹窗
             serviceScope.launch {
                 try {
+                    // 关键检查：如果服务已禁用，跳过弹窗
+                    val serviceEnabled = repository.serviceEnabled.first()
+                    if (!serviceEnabled) {
+                        Log.d(TAG, "[VideoAppCheck] Service disabled, stopping check")
+                        stopVideoAppCheck()
+                        return@launch
+                    }
+
                     val monitoredApp = repository.getMonitoredApp(targetApp)
                     if (monitoredApp == null || !monitoredApp.isEnabled) {
                         Log.d(TAG, "[VideoAppCheck] App not monitored or disabled, stopping")
@@ -142,8 +150,18 @@ class AppMonitorService : AccessibilityService() {
 
         // 注册同步完成回调：同步后检查当前前台应用是否需要显示警告
         usageTrackingManager.setOnSyncCompleteListener { updatedPackages ->
+            // 快速检查：如果没有更新或没有前台应用，直接跳过
             val currentFg = currentForegroundApp
-            if (currentFg != null && currentFg in updatedPackages) {
+            if (currentFg == null || currentFg !in updatedPackages) return@setOnSyncCompleteListener
+
+            serviceScope.launch {
+                // 关键检查：如果服务已禁用，跳过警告
+                val serviceEnabled = repository.serviceEnabled.first()
+                if (!serviceEnabled) {
+                    Log.d(TAG, "[Service] Sync completed but service disabled, skip warning check")
+                    return@launch
+                }
+
                 // 关键检查：确认该应用确实在前台，而不是残留的旧状态
                 val actualForeground = try {
                     rootInActiveWindow?.packageName?.toString()
@@ -165,9 +183,7 @@ class AppMonitorService : AccessibilityService() {
                     } else {
                         Log.d(TAG, "[Service] Sync completed, checking warnings for current foreground: $currentFg")
                     }
-                    serviceScope.launch {
-                        checkAndShowUsageWarning(currentFg)
-                    }
+                    checkAndShowUsageWarning(currentFg)
                 } else {
                     Log.d(TAG, "[Service] Sync completed but actual foreground ($actualForeground) != tracked ($currentFg), skip warning check")
                 }
@@ -182,6 +198,31 @@ class AppMonitorService : AccessibilityService() {
 
         // 启动定期清理 Map 的任务，防止内存泄漏
         startMapCleanupTask()
+
+        // Bug fix #3: 监听服务启用状态，禁用时清除 cooldown 和 lastCheckTime maps
+        startServiceEnabledWatcher()
+    }
+
+    /**
+     * 监听 serviceEnabled 状态变化
+     * 当服务被禁用时，清除所有 cooldown 和 lastCheckTime 记录
+     * 这样下次启用服务时，所有应用都会从头开始计算 cooldown
+     */
+    private fun startServiceEnabledWatcher() {
+        serviceScope.launch {
+            repository.serviceEnabled.collect { enabled ->
+                if (!enabled) {
+                    Log.d(TAG, "[Service] Service disabled, clearing cooldown maps")
+                    cooldownMap.clear()
+                    lastCheckTime.clear()
+                    shownLimitWarningToday.clear()
+                    stopVideoAppCheck()
+                    // 清除前台应用追踪状态
+                    currentForegroundApp = null
+                    foregroundStartTime = 0
+                }
+            }
+        }
     }
 
     /**
@@ -217,9 +258,12 @@ class AppMonitorService : AccessibilityService() {
      */
     private fun startMapCleanupTask() {
         serviceScope.launch {
-            while (true) {
+            // Bug fix #6: 使用 isActive 检查，确保协程能正确响应取消
+            while (isActive) {
                 delay(MAP_CLEANUP_INTERVAL_MS)
-                cleanupStaleMaps()
+                if (isActive) {  // 再次检查，因为 delay 后状态可能改变
+                    cleanupStaleMaps()
+                }
             }
         }
     }
@@ -382,6 +426,13 @@ class AppMonitorService : AccessibilityService() {
      */
     private suspend fun checkAndShowUsageWarning(packageName: String) {
         if (!::usageTrackingManager.isInitialized) return
+
+        // 关键检查：如果服务已禁用，跳过所有警告
+        val serviceEnabled = repository.serviceEnabled.first()
+        if (!serviceEnabled) {
+            Log.d(TAG, "[UsageWarning] Service disabled, skip warning for $packageName")
+            return
+        }
 
         // 防抖动：DEBOUNCE_INTERVAL_MS 内不重复检查同一应用
         val now = System.currentTimeMillis()
@@ -548,11 +599,11 @@ class AppMonitorService : AccessibilityService() {
             startActivity(intent)
             Log.d(TAG, "[UsageWarning] UsageWarningActivity launched for $packageName")
 
+            // Bug fix #5: 复用类级别的 handler，避免内存泄漏
             // 使用 moveTaskToFront 强制将任务移到前台（MIUI 兼容）
-            val handler = Handler(Looper.getMainLooper())
-            handler.post { moveSlowDownToFront() }
-            handler.postDelayed({ moveSlowDownToFront() }, 100)
-            handler.postDelayed({ moveSlowDownToFront() }, 300)
+            videoAppCheckHandler.post { moveSlowDownToFront() }
+            videoAppCheckHandler.postDelayed({ moveSlowDownToFront() }, 100)
+            videoAppCheckHandler.postDelayed({ moveSlowDownToFront() }, 300)
 
         } catch (e: Exception) {
             Log.e(TAG, "[UsageWarning] Failed to launch UsageWarningActivity: ${e.message}")
